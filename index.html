@@ -1798,6 +1798,88 @@
 
             modal.classList.remove('hidden');
         }
+// 1. กำหนดพิกัดเป้าหมาย (สถานที่ทำงาน) และระยะรัศมีที่ยินยอม
+const OFFICE_LOCATION = {
+  lat: 13.7563,     // ใส่ Latitude ของบริษัท
+  lng: 100.5018,    // ใส่ Longitude ของบริษัท
+  maxRadiusMeters: 100 // รัศมีไม่เกิน 100 เมตร
+};
+
+// 2. ฟังก์ชันคำนวณระยะทางระหว่างพิกัด 2 จุด (Haversine Formula) หน่วยเป็นเมตร
+function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // รัศมีของโลก (เมตร)
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c; // คืนค่าระยะทางเป็นเมตร
+}
+
+// 3. ฟังก์ชันตรวจสอบตำแหน่งปัจจุบันของผู้ใช้ก่อนบันทึกเวลา
+function checkLocationAndProceed(onSuccessCallback) {
+  if (!navigator.geolocation) {
+    alert("อุปกรณ์นี้ไม่รองรับการระบุตำแหน่ง GPS");
+    return;
+  }
+
+  // ดึงตำแหน่งปัจจุบันแบบความแม่นยำสูง
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const userLat = position.coords.latitude;
+      const userLng = position.coords.longitude;
+      const accuracy = position.coords.accuracy; // ความคลาดเคลื่อนของ GPS (เมตร)
+
+      // คำนวณระยะห่างจากบริษัท
+      const distance = calculateDistanceMeters(
+        userLat, userLng, 
+        OFFICE_LOCATION.lat, OFFICE_LOCATION.lng
+      );
+
+      console.log(`ระยะห่างปัจจุบัน: ${distance.toFixed(1)} เมตร (ความแม่นยำ GPS: ${accuracy} เมตร)`);
+
+      // ตรวจสอบว่าอยู่ในรัศมี 100 เมตรหรือไม่
+      if (distance <= OFFICE_LOCATION.maxRadiusMeters) {
+        // อยู่ในเขต 100 เมตร -> อนุญาตให้บันทึกเวลาได้
+        onSuccessCallback({
+          lat: userLat,
+          lng: userLng,
+          distance: distance.toFixed(1)
+        });
+      } else {
+        // ออกนอกเขต 100 เมตร -> บล็อกการลงเวลา
+        alert(`❌ ไม่สามารถลงเวลาได้: คุณไม่อยู่ในพื้นที่ทำงาน (อยู่ห่างออกไป ${Math.round(distance)} เมตร จากรัศมีที่กำหนด 100 เมตร)`);
+      }
+    },
+    (error) => {
+      let msg = "ไม่สามารถระบุตำแหน่ง GPS ได้";
+      if (error.code === error.PERMISSION_DENIED) {
+        msg = "กรุณาเปิดสิทธิ์ให้เข้าถึงตำแหน่ง (Location Permission) ในเบราว์เซอร์";
+      }
+      alert(`⚠️ ข้อผิดพลาด GPS: ${msg}`);
+    },
+    {
+      enableHighAccuracy: true, // เปิดโหมดความแม่นยำสูง (GPS)
+      timeout: 10000,           // หน่วงเวลาสูงสุด 10 วินาที
+      maximumAge: 0             // ไม่ใช้ตำแหน่งเก่าที่แคชไว้
+    }
+  );
+}
+// เรียกใช้เมื่อทำการสแกนหน้า หรือสแกน QR Code สำเร็จ
+function onScanSuccess(employeeData) {
+  // เช็กพิกัดก่อนส่งข้อมูล
+  checkLocationAndProceed((locationData) => {
+    // แนบพิกัดและระยะทางไปด้วยตอนส่งข้อมูลลง Google Sheet
+    employeeData.latitude = locationData.lat;
+    employeeData.longitude = locationData.lng;
+    employeeData.distanceMeters = locationData.distance;
+
+    // ทำการบันทึกข้อมูลเวลา
+    saveAttendanceRecord(employeeData);
+  });
+}
     </script>
 </body>
 </html>
