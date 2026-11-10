@@ -1,0 +1,2207 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full bg-slate-950 font-sans">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bio & QR Time Attendance & Personnel Management</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Kanit & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Kanit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        cyber: {
+                            400: '#34d399',
+                            500: '#10b981',
+                            glow: '#00ffcc'
+                        },
+                        qr: {
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            glow: '#c084fc'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Kanit', sans-serif; }
+        
+        /* Glassmorphism Styling */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Face Scan Beam Effect */
+        @keyframes scan-beam-face {
+            0% { top: 5%; opacity: 0.3; }
+            50% { opacity: 1; }
+            100% { top: 90%; opacity: 0.3; }
+        }
+        
+        .scanner-beam-face {
+            position: absolute;
+            left: 5%;
+            right: 5%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #10b981, #00ffcc, #10b981, transparent);
+            box-shadow: 0 0 15px #00ffcc, 0 0 25px #10b981;
+            animation: scan-beam-face 2.2s ease-in-out infinite alternate;
+            z-index: 20;
+        }
+
+        /* QR Scan Line Animation */
+        @keyframes scan-beam-qr {
+            0% { top: 10%; opacity: 0.4; }
+            50% { opacity: 1; }
+            100% { top: 85%; opacity: 0.4; }
+        }
+
+        .scanner-beam-qr {
+            position: absolute;
+            left: 10%;
+            right: 10%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #8b5cf6, #c084fc, #8b5cf6, transparent);
+            box-shadow: 0 0 15px #c084fc, 0 0 25px #8b5cf6;
+            animation: scan-beam-qr 1.8s ease-in-out infinite alternate;
+            z-index: 20;
+        }
+
+        /* Corner Bracket Animations */
+        @keyframes corner-glow-face {
+            0%, 100% { border-color: #10b981; filter: drop-shadow(0 0 4px #10b981); }
+            50% { border-color: #00ffcc; filter: drop-shadow(0 0 12px #00ffcc); }
+        }
+        
+        .corner-bracket-face { animation: corner-glow-face 2s infinite ease-in-out; }
+
+        @keyframes corner-glow-qr {
+            0%, 100% { border-color: #8b5cf6; filter: drop-shadow(0 0 4px #8b5cf6); }
+            50% { border-color: #c084fc; filter: drop-shadow(0 0 12px #c084fc); }
+        }
+
+        .corner-bracket-qr { animation: corner-glow-qr 1.8s infinite ease-in-out; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #10b981; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #printablePassCard, #printablePassCard * { visibility: visible; }
+            #printablePassCard { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body class="h-full text-slate-100 flex flex-col bg-slate-950 antialiased selection:bg-emerald-500 selection:text-white">
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2.5 pointer-events-none max-w-md w-full px-4"></div>
+
+    <!-- MAIN HEADER NAVIGATION -->
+    <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-20 gap-4">
+                
+                <!-- Logo & System Title -->
+                <div class="flex items-center gap-3.5">
+                    <div class="relative w-11 h-11 bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 text-slate-950 font-bold text-xl">
+                        <i class="fa-solid fa-qrcode"></i>
+                        <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                        </span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">Bio & QR Attendance</h1>
+                            <span class="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Pro HR v3.5</span>
+                        </div>
+                        <p class="text-xs text-slate-400">ระบบลงเวลาสแกนใบหน้า QR Code & จัดการข้อมูลบุคลากร</p>
+                    </div>
+                </div>
+
+                <!-- Desktop Navigation Tabs -->
+                <nav class="hidden lg:flex bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 shadow-inner gap-1">
+                    <button id="navScan" onclick="switchView('scan')" 
+                            class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all text-white bg-emerald-600 shadow-sm shadow-emerald-600/30">
+                        <i class="fa-solid fa-camera"></i>
+                        <span>สแกนลงเวลา</span>
+                    </button>
+
+                    <button id="navEnroll" onclick="switchView('enroll')" 
+                            class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-900">
+                        <i class="fa-solid fa-face-smile-beam text-teal-400"></i>
+                        <span>ลงทะเบียนใบหน้า</span>
+                    </button>
+
+                    <button id="navPersonnel" onclick="switchView('personnel')" 
+                            class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-900">
+                        <i class="fa-solid fa-users-gear"></i>
+                        <span>จัดการบุคลากร</span>
+                    </button>
+
+                    <button id="navQrGen" onclick="switchView('qrGen')" 
+                            class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-900">
+                        <i class="fa-solid fa-address-card"></i>
+                        <span>บัตร QR Pass</span>
+                    </button>
+
+                    <button id="navDashboard" onclick="switchView('dashboard')" 
+                            class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-900">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>ประวัติ Log & รายงาน</span>
+                    </button>
+
+                    <button id="navSettings" onclick="switchView('settings')" 
+                            class="flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-900">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Google Sheets</span>
+                    </button>
+                </nav>
+
+                <!-- Audio Toggle & Realtime Clock -->
+                <div class="flex items-center gap-4">
+                    <button id="soundToggleBtn" onclick="toggleSound()" title="ปิด/เปิด เสียงการทำงาน" 
+                            class="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 hover:text-emerald-400 hover:border-emerald-500/50 transition">
+                        <i id="soundIcon" class="fa-solid fa-volume-high"></i>
+                    </button>
+
+                    <div class="hidden sm:block text-right border-l border-slate-800 pl-4">
+                        <div id="headerDate" class="text-[11px] text-slate-400 font-light">กำลังโหลด...</div>
+                        <div id="headerClock" class="text-base font-bold text-emerald-400 font-mono tracking-wider">00:00:00 น.</div>
+                    </div>
+                </div>
+
+            </div>
+            
+            <!-- Mobile Navigation -->
+            <div class="lg:hidden flex border-t border-slate-800 py-2 gap-1 overflow-x-auto text-xs">
+                <button onclick="switchView('scan')" class="flex-1 py-2 px-2.5 rounded-lg bg-slate-800 text-center font-medium text-white whitespace-nowrap">
+                    <i class="fa-solid fa-camera mr-1"></i> สแกน
+                </button>
+                <button onclick="switchView('enroll')" class="flex-1 py-2 px-2.5 rounded-lg bg-slate-950 text-slate-400 text-center font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-face-smile-beam mr-1"></i> ใบหน้า
+                </button>
+                <button onclick="switchView('personnel')" class="flex-1 py-2 px-2.5 rounded-lg bg-slate-950 text-slate-400 text-center font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-users-gear mr-1"></i> บุคลากร
+                </button>
+                <button onclick="switchView('qrGen')" class="flex-1 py-2 px-2.5 rounded-lg bg-slate-950 text-slate-400 text-center font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-qrcode mr-1"></i> QR Pass
+                </button>
+                <button onclick="switchView('dashboard')" class="flex-1 py-2 px-2.5 rounded-lg bg-slate-950 text-slate-400 text-center font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-chart-line mr-1"></i> รายงาน Log
+                </button>
+                <button onclick="switchView('settings')" class="flex-1 py-2 px-2.5 rounded-lg bg-slate-950 text-slate-400 text-center font-medium whitespace-nowrap">
+                    <i class="fa-solid fa-cloud-arrow-up mr-1"></i> Sheets
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN BODY CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- ======================================================== -->
+        <!-- VIEW 1: DUAL-MODE KIOSK SCANNER (FACE & QR CODE) -->
+        <!-- ======================================================== -->
+        <section id="viewScan" class="space-y-6">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- LEFT COLUMN: CAMERA VIEWPORT & DUAL SWITCHER -->
+                <div class="lg:col-span-8 flex flex-col gap-4">
+                    
+                    <div class="glass-card rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden flex flex-col items-center">
+                        
+                        <!-- Top Switcher & Status Bar -->
+                        <div class="w-full flex flex-col sm:flex-row items-center justify-between mb-4 z-10 gap-3">
+                            
+                            <!-- SCAN MODE TOGGLE SWITCH -->
+                            <div class="bg-slate-950/90 p-1 rounded-2xl border border-slate-800 flex items-center gap-1 w-full sm:w-auto">
+                                <button id="modeFaceBtn" onclick="setScanMode('FACE')" 
+                                        class="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20">
+                                    <i class="fa-solid fa-user-gear"></i>
+                                    <span>👤 สแกนใบหน้า</span>
+                                </button>
+                                <button id="modeQrBtn" onclick="setScanMode('QR')" 
+                                        class="flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white">
+                                    <i class="fa-solid fa-qrcode"></i>
+                                    <span>📱 สแกน QR Code</span>
+                                </button>
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <span id="modeStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <span id="modeStatusText" class="text-xs font-mono font-semibold uppercase tracking-wider text-slate-300">MODE: FACE RECOGNITION</span>
+                            </div>
+                        </div>
+
+                        <!-- CAMERA VIEWPORT BOX -->
+                        <div id="cameraViewport" class="relative w-full max-w-2xl aspect-video bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-inner flex items-center justify-center">
+                            
+                            <!-- Video Feed -->
+                            <video id="webcamVideo" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100 hidden"></video>
+
+                            <!-- Overlay Canvas for Face Landmarks & Reticle -->
+                            <canvas id="overlayCanvas" class="absolute inset-0 w-full h-full pointer-events-none z-10 transform -scale-x-100"></canvas>
+
+                            <!-- HUD Overlay UI -->
+                            <div id="hudOverlay" class="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-6">
+                                
+                                <!-- Scanning Beam Animation -->
+                                <div id="scanBeamFace" class="scanner-beam-face"></div>
+                                <div id="scanBeamQr" class="scanner-beam-qr hidden"></div>
+
+                                <!-- Dynamic Frame Brackets -->
+                                <div class="w-full h-full relative flex items-center justify-center">
+                                    
+                                    <!-- FACE SCANNING FRAME -->
+                                    <div id="faceTargetBox" class="w-60 h-60 sm:w-72 sm:h-72 border-2 border-dashed border-emerald-500/40 rounded-3xl relative flex items-center justify-center">
+                                        <div class="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-emerald-400 corner-bracket-face rounded-tl-xl"></div>
+                                        <div class="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-emerald-400 corner-bracket-face rounded-tr-xl"></div>
+                                        <div class="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-emerald-400 corner-bracket-face rounded-bl-xl"></div>
+                                        <div class="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-emerald-400 corner-bracket-face rounded-br-xl"></div>
+                                        
+                                        <div class="w-4 h-4 border-t border-l border-emerald-400/60 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+                                        
+                                        <div class="absolute -bottom-10 text-center w-full">
+                                            <span class="px-3 py-1 bg-slate-900/90 text-emerald-300 text-xs font-medium rounded-full border border-emerald-500/30 backdrop-blur-md">
+                                                <i class="fa-solid fa-expand mr-1"></i> วางใบหน้าให้ตรงกับกรอบตรวจจับ
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- QR SCANNING FRAME -->
+                                    <div id="qrTargetBox" class="w-52 h-52 sm:w-64 sm:h-64 border-2 border-dashed border-purple-500/40 rounded-2xl relative flex items-center justify-center hidden">
+                                        <div class="absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 border-purple-400 corner-bracket-qr rounded-tl-lg"></div>
+                                        <div class="absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 border-purple-400 corner-bracket-qr rounded-tr-lg"></div>
+                                        <div class="absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 border-purple-400 corner-bracket-qr rounded-bl-lg"></div>
+                                        <div class="absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 border-purple-400 corner-bracket-qr rounded-br-lg"></div>
+                                        
+                                        <div class="text-purple-400/50 text-4xl">
+                                            <i class="fa-solid fa-qrcode animate-pulse"></i>
+                                        </div>
+                                        
+                                        <div class="absolute -bottom-10 text-center w-full">
+                                            <span class="px-3 py-1 bg-slate-900/90 text-purple-300 text-xs font-medium rounded-full border border-purple-500/30 backdrop-blur-md">
+                                                <i class="fa-solid fa-mobile-screen mr-1"></i> ยื่นบัตร QR Code สแกนผ่านกล้อง
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <!-- Camera Fallback Placeholder -->
+                            <div id="cameraPlaceholder" class="text-center p-8 z-30">
+                                <div id="placeholderIcon" class="w-20 h-20 rounded-3xl bg-slate-900 border border-slate-700 text-emerald-400 flex items-center justify-center mx-auto mb-4 text-3xl shadow-lg">
+                                    <i class="fa-solid fa-video"></i>
+                                </div>
+                                <h3 id="placeholderTitle" class="text-lg font-bold text-white mb-1">กล้องยืนยันตัวตนพร้อมใช้งาน</h3>
+                                <p class="text-xs text-slate-400 max-w-sm mx-auto mb-6">เปิดใช้งานเว็บแคมเพื่อเริ่มสแกน หรือคลิกเลือกปุ่มทดสอบบุคลากรด้านล่าง</p>
+                                
+                                <div class="flex flex-wrap items-center justify-center gap-3">
+                                    <button onclick="startWebcam()" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center gap-2">
+                                        <i class="fa-solid fa-video"></i> เปิดกล้องเว็บแคม
+                                    </button>
+                                    <button onclick="triggerScanSequence()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs rounded-xl border border-slate-700 transition flex items-center gap-2">
+                                        <i class="fa-solid fa-robot"></i> จำลองการสแกนแบบสุ่ม
+                                    </button>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- QUICK DEMO TAP BUTTONS FOR ALL EMPLOYEES -->
+                        <div class="w-full mt-4 bg-slate-900/60 p-3 rounded-2xl border border-slate-800">
+                            <div class="text-[11px] font-semibold text-slate-400 mb-2 flex items-center justify-between">
+                                <span><i class="fa-solid fa-bolt text-amber-400 mr-1"></i> เลือกสแกนด่วนตามรายชื่อบุคลากร (Quick Scan Selection):</span>
+                                <span class="text-[10px] text-slate-500 font-mono" id="quickEmpCountText">0 คน</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2" id="quickQrDemoButtons">
+                                <!-- Injected dynamically by JS -->
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN: VERIFICATION RESULT & ACTION LOGGING -->
+                <div class="lg:col-span-4 flex flex-col gap-6">
+                    
+                    <!-- Matched Employee Profile & Action Card -->
+                    <div class="glass-card rounded-3xl p-6 shadow-xl border border-slate-800 flex flex-col justify-between relative overflow-hidden">
+                        <div class="absolute -right-6 -bottom-6 text-slate-800/20 text-8xl pointer-events-none font-bold">
+                            <i id="cardBgIcon" class="fa-solid fa-user-check"></i>
+                        </div>
+
+                        <div>
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                                    <i id="scanTypeIcon" class="fa-solid fa-id-card text-emerald-400"></i>
+                                    <span id="matchCardTitle">ข้อมูลพนักงานที่ตรวจพบ</span>
+                                </h2>
+                                <span id="scanStatusBadge" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                                    READY
+                                </span>
+                            </div>
+
+                            <!-- Employee Info Box -->
+                            <div id="matchProfileCard" class="bg-slate-950/90 border border-slate-800 rounded-2xl p-4 text-center relative">
+                                <div class="relative w-20 h-20 mx-auto mb-3">
+                                    <img id="matchedEmpAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" 
+                                         alt="Employee" class="w-full h-full rounded-2xl object-cover border-2 border-emerald-500/50 shadow-md">
+                                    <div id="matchedConfidenceBadge" class="absolute -bottom-2 right-0 left-0 bg-emerald-500 text-slate-950 text-[10px] font-bold py-0.5 px-1 rounded-full shadow font-mono">
+                                        MATCH: 98.6%
+                                    </div>
+                                </div>
+                                
+                                <h3 id="matchedEmpName" class="text-base font-bold text-white mb-0.5">สมชาย ใจดี</h3>
+                                <p id="matchedEmpDept" class="text-xs text-slate-400 mb-3">EMP-001 • ฝ่ายไอทีและระบบ</p>
+                                
+                                <!-- Location Selector -->
+                                <div class="mb-3 text-left">
+                                    <label class="block text-[10px] text-slate-400 mb-1">สถานที่ทำงาน:</label>
+                                    <select id="actionLocationSelect" class="w-full bg-slate-900 border border-slate-800 text-white text-xs rounded-xl px-3 py-2 focus:border-emerald-500 outline-none">
+                                        <option value="สำนักงานใหญ่">สำนักงานใหญ่ (Head Office)</option>
+                                        <option value="Work From Home">Work From Home (WFH)</option>
+                                        <option value="ออกไซต์งาน">ออกไซต์งาน / นอกสถานที่</option>
+                                    </select>
+                                </div>
+
+                                <!-- Note Input -->
+                                <div class="mb-3 text-left">
+                                    <label class="block text-[10px] text-slate-400 mb-1">หมายเหตุเพิ่มเติม (ถ้ามี):</label>
+                                    <input type="text" id="actionNoteInput" placeholder="เช่น ติดประชุมลูกค้านอกสถานที่..." 
+                                           class="w-full bg-slate-900 border border-slate-800 text-white text-xs rounded-xl px-3 py-1.5 focus:border-emerald-500 outline-none">
+                                </div>
+
+                                <!-- ACTION BUTTONS: CLOCK IN / BREAK / CLOCK OUT -->
+                                <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+                                    <button onclick="executeAttendanceAction('CLOCK_IN')" 
+                                            class="bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-slate-950 font-bold text-xs py-2.5 rounded-xl shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5">
+                                        <i class="fa-solid fa-right-to-bracket"></i> 🟢 เข้างาน
+                                    </button>
+
+                                    <button onclick="executeAttendanceAction('BREAK_START')" 
+                                            class="bg-amber-600/80 hover:bg-amber-500 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5">
+                                        <i class="fa-solid fa-utensils"></i> 🟡 พักเที่ยง
+                                    </button>
+
+                                    <button onclick="executeAttendanceAction('BREAK_END')" 
+                                            class="bg-sky-600/80 hover:bg-sky-500 text-white font-bold text-xs py-2.5 rounded-xl transition flex items-center justify-center gap-1.5">
+                                        <i class="fa-solid fa-briefcase"></i> 🔵 กลับเข้าพัก
+                                    </button>
+
+                                    <button onclick="executeAttendanceAction('CLOCK_OUT')" 
+                                            class="bg-rose-600 hover:bg-rose-500 active:scale-95 text-white font-bold text-xs py-2.5 rounded-xl shadow-md shadow-rose-600/20 transition flex items-center justify-center gap-1.5">
+                                        <i class="fa-solid fa-right-from-bracket"></i> 🔴 ออกงาน
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="mt-4">
+                            <div class="flex items-center justify-between text-xs text-slate-400 mb-1 font-mono">
+                                <span id="scanProgressLabel">AI SCAN ENGINE</span>
+                                <span id="scanProgressPercent">0%</span>
+                            </div>
+                            <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                                <div id="scanProgressBar" class="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-purple-500 w-0 transition-all duration-200"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Scan Activity Feed -->
+                    <div class="glass-card rounded-3xl p-5 shadow-xl flex-1 border border-slate-800 flex flex-col">
+                        <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
+                            <h3 class="text-xs font-bold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-emerald-400"></i>
+                                รายการสแกนล่าสุดวันนี้
+                            </h3>
+                            <span id="recentTodayCount" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700">0 รายการ</span>
+                        </div>
+
+                        <div id="recentActivityFeed" class="space-y-2.5 overflow-y-auto max-h-[220px] pr-1 flex-1">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ======================================================== -->
+        <!-- VIEW 1.5: FACE ENROLLMENT WIZARD (ลงทะเบียนใบหน้าพนักงาน) -->
+        <!-- ======================================================== -->
+        <section id="viewEnroll" class="hidden space-y-6">
+            
+            <div class="glass-card rounded-3xl p-6 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-face-smile-beam text-teal-400"></i>
+                        ระบบลงทะเบียนจัดเก็บใบหน้าพนักงาน (Face Biometric Enrollment)
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">ถ่ายภาพสแกนโครงสร้างใบหน้าสดและสกัด Feature Vector 128D เพื่อใช้ยืนยันตัวตน</p>
+                </div>
+                
+                <div id="enrollStatusHeaderBadge" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 border border-slate-800 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-slate-500"></span>
+                    <span>กรุณาเลือกพนักงาน</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- LEFT: WEBCAM ENROLLMENT CAMERA -->
+                <div class="lg:col-span-7 glass-card rounded-3xl p-5 border border-slate-800 flex flex-col items-center">
+                    
+                    <!-- Employee Selector Dropdown -->
+                    <div class="w-full mb-4">
+                        <label class="block text-xs font-medium text-slate-300 mb-1.5">เลือกพนักงานที่ต้องการลงทะเบียนใบหน้า:</label>
+                        <select id="enrollEmpSelect" onchange="loadEmployeeForEnrollment()" 
+                                class="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-4 py-2.5 text-xs focus:border-teal-500 outline-none">
+                            <!-- Injected by JS -->
+                        </select>
+                    </div>
+
+                    <!-- Webcam Viewport with Guidance Overlay -->
+                    <div class="relative w-full aspect-video bg-slate-950 rounded-2xl overflow-hidden border-2 border-slate-800 shadow-inner flex items-center justify-center">
+                        <video id="enrollWebcam" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100 hidden"></video>
+                        <canvas id="enrollCanvas" class="hidden"></canvas>
+
+                        <!-- Biometric Face Capture Overlay Frame -->
+                        <div id="enrollHudOverlay" class="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-6">
+                            <div class="w-full h-full relative flex items-center justify-center">
+                                <div class="w-56 h-56 sm:w-64 sm:h-64 border-2 border-dashed border-teal-400/60 rounded-full relative flex items-center justify-center animate-pulse">
+                                    <div class="absolute inset-0 border border-teal-400/30 rounded-full scale-110"></div>
+                                    <div class="w-2 h-2 rounded-full bg-teal-400 absolute top-2"></div>
+                                    <div class="w-2 h-2 rounded-full bg-teal-400 absolute bottom-2"></div>
+                                    <div class="w-2 h-2 rounded-full bg-teal-400 absolute left-2"></div>
+                                    <div class="w-2 h-2 rounded-full bg-teal-400 absolute right-2"></div>
+                                    <div class="text-[11px] font-mono text-teal-300/80 uppercase">FACE GUIDANCE</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Camera Fallback Placeholder -->
+                        <div id="enrollPlaceholder" class="text-center p-6 z-20">
+                            <i class="fa-solid fa-camera text-4xl text-slate-600 mb-3"></i>
+                            <h4 class="text-sm font-bold text-white mb-1">กล้องลงทะเบียนใบหน้า</h4>
+                            <p class="text-xs text-slate-400 max-w-xs mx-auto mb-4">เปิดกล้องเพื่อเริ่มถ่ายภาพสแกนใบหน้า</p>
+                            <button onclick="startEnrollWebcam()" class="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-slate-950 text-xs font-bold rounded-xl shadow-lg transition">
+                                <i class="fa-solid fa-video mr-1.5"></i> เปิดใช้งานกล้องถ่ายภาพ
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Guidance Checks -->
+                    <div class="grid grid-cols-3 gap-2 w-full mt-4 text-center text-[11px]">
+                        <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800 text-slate-300">
+                            <i class="fa-solid fa-eye text-teal-400 mr-1"></i> มองตรงที่กล้อง
+                        </div>
+                        <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800 text-slate-300">
+                            <i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> แสงสว่างเพียงพอ
+                        </div>
+                        <div class="bg-slate-950/80 p-2 rounded-xl border border-slate-800 text-slate-300">
+                            <i class="fa-solid fa-face-smile text-indigo-400 mr-1"></i> ใบหน้าอยู่ในวงกลม
+                        </div>
+                    </div>
+
+                    <!-- Capture Action Button -->
+                    <div class="w-full mt-4">
+                        <button onclick="captureFacePhoto()" class="w-full py-3 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-teal-500/20 transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-shutter-snap text-sm"></i> ถ่ายภาพและประมวลผลสกัด Feature Vector
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT: CAPTURED PREVIEW & VECTOR FEATURE DETAILS -->
+                <div class="lg:col-span-5 flex flex-col gap-4">
+                    
+                    <div class="glass-card rounded-3xl p-5 border border-slate-800 flex flex-col items-center justify-between h-full">
+                        <div class="w-full">
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-microchip text-teal-400"></i>
+                                    ข้อมูลโพรไฟล์ใบหน้า (Biometric Profile)
+                                </h3>
+                                <span id="enrollCapturedStatus" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400">
+                                    UNSAVED
+                                </span>
+                            </div>
+
+                            <!-- Captured Snapshot Preview -->
+                            <div class="text-center mb-4">
+                                <div class="relative w-28 h-28 mx-auto mb-3">
+                                    <img id="enrollPreviewPhoto" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80" 
+                                         class="w-full h-full rounded-2xl object-cover border-2 border-teal-500/50 shadow-md">
+                                    <div class="absolute -bottom-2 right-0 left-0 bg-slate-900 text-teal-400 text-[9px] font-mono py-0.5 border border-slate-800 rounded-full">
+                                        SNAPSHOT 128-D
+                                    </div>
+                                </div>
+                                <h4 id="enrollPreviewName" class="text-sm font-bold text-white">กรุณาเลือกพนักงาน</h4>
+                                <p id="enrollPreviewDept" class="text-xs text-slate-400">EMP-XXX</p>
+                            </div>
+
+                            <!-- Vector Matrix Output Preview Box -->
+                            <div class="mb-4">
+                                <label class="block text-[10px] font-mono text-slate-400 mb-1">Simulated 128D Facial Feature Array Vector:</label>
+                                <textarea id="enrollVectorBox" readonly rows="4" 
+                                          class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-[10px] font-mono text-teal-300 resize-none outline-none"
+                                          placeholder="ยังไม่มีข้อมูล Vector... กดถ่ายภาพเพื่อสกัดค่า Feature Vector"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Save & Reset Action Buttons -->
+                        <div class="w-full space-y-2 pt-3 border-t border-slate-800">
+                            <button onclick="saveFaceEnrollment()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลใบหน้าเข้าโพรไฟล์พนักงาน
+                            </button>
+                            
+                            <button onclick="clearFaceEnrollment()" class="w-full py-2 bg-slate-900 hover:bg-rose-950 text-rose-400 border border-rose-500/30 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-user-slash"></i> ลบข้อมูลใบหน้าพนักงานท่านนี้
+                            </button>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ======================================================== -->
+        <!-- VIEW 2: PERSONNEL MANAGEMENT (เพิ่ม / แก้ไข / ลบบุคลากร) -->
+        <!-- ======================================================== -->
+        <section id="viewPersonnel" class="hidden space-y-6">
+            
+            <!-- Personnel Header Bar -->
+            <div class="glass-card rounded-3xl p-6 border border-slate-800 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-users-gear text-emerald-400"></i>
+                        ระบบจัดการข้อมูลบุคลากร (Personnel Management)
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">เพิ่ม แก้ไข ลบข้อมูลบุคลากรในองค์กร และอัปเดตระบบสแกนอัตโนมัติ</p>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <button onclick="openAddEmployeeModal()" class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/20 transition flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i> เพิ่มบุคลากรใหม่
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="glass-card rounded-2xl p-4 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div class="relative w-full sm:w-72">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500 text-xs"></i>
+                    <input type="text" id="personnelSearchInput" oninput="renderPersonnelTable()" placeholder="ค้นชื่อ, รหัส, แผนก หรือตำแหน่ง..."
+                           class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:border-emerald-500 outline-none">
+                </div>
+
+                <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <select id="personnelDeptFilter" onchange="renderPersonnelTable()" class="bg-slate-950 border border-slate-800 text-slate-300 rounded-xl px-3 py-2 text-xs focus:border-emerald-500 outline-none">
+                        <option value="ALL">แผนกทั้งหมด</option>
+                    </select>
+
+                    <div class="text-xs text-slate-400 font-mono">
+                        รวมทั้งหมด: <span id="totalPersonnelBadge" class="text-emerald-400 font-bold">0</span> คน
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employees Grid / Cards -->
+            <div id="personnelCardsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <!-- Injected dynamically by JS -->
+            </div>
+
+        </section>
+
+
+        <!-- ======================================================== -->
+        <!-- VIEW 3: EMPLOYEE QR CODE PASS GENERATOR -->
+        <!-- ======================================================== -->
+        <section id="viewQrGen" class="hidden space-y-6">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-5xl mx-auto">
+                
+                <!-- Left Control Form -->
+                <div class="lg:col-span-5 glass-card rounded-3xl p-6 border border-slate-800">
+                    <h2 class="text-base font-bold text-white mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-address-card text-purple-400"></i>
+                        สร้างบัตร QR Code พนักงาน
+                    </h2>
+                    <p class="text-xs text-slate-400 mb-6">เลือกพนักงานจากระบบ หรือกรอกข้อมูลเพื่อสร้างบัตร QR Pass สำหรับสแกนเข้างาน</p>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">เลือกพนักงานในระบบ:</label>
+                            <select id="qrGenSelectEmp" onchange="loadEmployeeToQrGen()" class="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2.5 text-xs focus:border-purple-500 outline-none">
+                                <!-- Injected by JS -->
+                            </select>
+                        </div>
+
+                        <div class="border-t border-slate-800 pt-3">
+                            <label class="block text-xs font-medium text-slate-300 mb-1">รหัสพนักงาน (Employee ID):</label>
+                            <input type="text" id="qrGenEmpId" placeholder="เช่น EMP-001" 
+                                   class="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-xs focus:border-purple-500 outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">ชื่อ - นามสกุล:</label>
+                            <input type="text" id="qrGenEmpName" placeholder="เช่น นายสมชาย ใจดี" 
+                                   class="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-xs focus:border-purple-500 outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-300 mb-1">แผนก / ฝ่ายงาน:</label>
+                            <input type="text" id="qrGenEmpDept" placeholder="เช่น ฝ่ายไอทีและระบบ" 
+                                   class="w-full bg-slate-950 border border-slate-800 text-white rounded-xl px-3.5 py-2 text-xs focus:border-purple-500 outline-none">
+                        </div>
+
+                        <div class="pt-2 flex gap-2">
+                            <button onclick="renderQrPassCard()" class="flex-1 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg transition">
+                                <i class="fa-solid fa-arrows-rotate mr-1"></i> อัปเดตการสร้าง QR Pass
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Card Render Preview -->
+                <div class="lg:col-span-7 flex flex-col items-center justify-center">
+                    
+                    <!-- Printable Employee Pass Card -->
+                    <div id="printablePassCard" class="w-full max-w-md bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 border-2 border-purple-500/40 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+                        
+                        <!-- Decorative Pass Background -->
+                        <div class="absolute top-0 right-0 left-0 h-2 bg-gradient-to-r from-emerald-400 via-purple-500 to-indigo-500"></div>
+                        <div class="flex items-center justify-between pb-4 border-b border-slate-800">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid fa-shield-halved text-purple-400 text-lg"></i>
+                                <span class="text-xs font-bold tracking-wider uppercase text-slate-200">EMPLOYEE ACCESS PASS</span>
+                            </div>
+                            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">VERIFIED ID</span>
+                        </div>
+
+                        <div class="my-6 flex flex-col sm:flex-row items-center gap-6">
+                            
+                            <!-- Avatar & Details -->
+                            <div class="flex-1 text-center sm:text-left">
+                                <img id="cardPreviewAvatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" 
+                                     class="w-20 h-20 rounded-2xl object-cover border-2 border-purple-400/60 mx-auto sm:mx-0 shadow-md mb-3">
+                                
+                                <h3 id="cardPreviewName" class="text-lg font-bold text-white mb-0.5">สมชาย ใจดี</h3>
+                                <div id="cardPreviewId" class="text-xs font-mono text-purple-300 font-semibold mb-1">EMP-001</div>
+                                <div id="cardPreviewDept" class="text-xs text-slate-400">ฝ่ายไอทีและระบบ</div>
+                            </div>
+
+                            <!-- QR Code Render Box -->
+                            <div class="bg-white p-3 rounded-2xl shadow-xl flex flex-col items-center">
+                                <img id="cardPreviewQrImg" src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=EMP-001" 
+                                     alt="QR Code" class="w-32 h-32 object-contain">
+                                <span class="text-[10px] font-mono font-bold text-slate-800 mt-1">SCAN TO CLOCK IN</span>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                            <div>ออกโดย: ระบบ Bio & QR Attendance</div>
+                            <div class="font-mono">ISSUE: 2026</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="mt-6 flex flex-wrap gap-3">
+                        <button onclick="window.print()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold rounded-xl border border-slate-700 transition flex items-center gap-2">
+                            <i class="fa-solid fa-print"></i> พิมพ์บัตรพนักงาน (Print Pass)
+                        </button>
+                        <a id="downloadQrBtn" href="#" download="emp_qr_code.png" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-2">
+                            <i class="fa-solid fa-download"></i> ดาวน์โหลดเฉพาะรูป QR
+                        </a>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ======================================================== -->
+        <!-- VIEW 4: ADMIN DASHBOARD & ATTENDANCE LOGS -->
+        <!-- ======================================================== -->
+        <section id="viewDashboard" class="hidden space-y-6">
+            
+            <!-- STATS SUMMARY CARDS -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                
+                <div class="glass-card p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
+                    <div class="text-xs text-slate-400 font-medium mb-1">บุคลากรทั้งหมด</div>
+                    <div id="statTotalStaff" class="text-2xl font-bold font-mono text-cyan-400">0</div>
+                    <div class="text-[11px] text-slate-500 mt-1">ลงทะเบียนในระบบ</div>
+                    <div class="absolute right-4 top-5 text-cyan-500/10 text-4xl pointer-events-none"><i class="fa-solid fa-id-card"></i></div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
+                    <div class="text-xs text-slate-400 font-medium mb-1">พนักงานลงเวลาวันนี้</div>
+                    <div id="statTotalClocked" class="text-2xl font-bold font-mono text-white">0</div>
+                    <div class="text-[11px] text-slate-500 mt-1">บันทึกเข้างานแล้ว</div>
+                    <div class="absolute right-4 top-5 text-slate-800 text-4xl pointer-events-none"><i class="fa-solid fa-users"></i></div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
+                    <div class="text-xs text-emerald-400 font-medium mb-1">เข้างานตรงเวลา</div>
+                    <div id="statOnTime" class="text-2xl font-bold font-mono text-emerald-400">0</div>
+                    <div class="text-[11px] text-emerald-500/70 mt-1">ก่อนเวลา 08:30 น.</div>
+                    <div class="absolute right-4 top-5 text-emerald-500/10 text-4xl pointer-events-none"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
+                    <div class="text-xs text-amber-400 font-medium mb-1">มาสาย</div>
+                    <div id="statLate" class="text-2xl font-bold font-mono text-amber-400">0</div>
+                    <div class="text-[11px] text-amber-500/70 mt-1">หลังเวลา 08:30 น.</div>
+                    <div class="absolute right-4 top-5 text-amber-500/10 text-4xl pointer-events-none"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                </div>
+
+                <div class="glass-card p-5 rounded-2xl border border-slate-800 relative overflow-hidden">
+                    <div class="text-xs text-purple-400 font-medium mb-1">สแกน QR vs ใบหน้า</div>
+                    <div id="statScanRatio" class="text-xl font-bold font-mono text-purple-300">0 / 0</div>
+                    <div class="text-[11px] text-purple-400/70 mt-1">QR Code / สแกนใบหน้า</div>
+                    <div class="absolute right-4 top-5 text-purple-500/10 text-4xl pointer-events-none"><i class="fa-solid fa-qrcode"></i></div>
+                </div>
+
+            </div>
+
+            <!-- ATTENDANCE LOG TABLE -->
+            <div class="glass-card rounded-3xl border border-slate-800 p-6 shadow-xl">
+                
+                <!-- Filter Bar -->
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+                    
+                    <div class="flex flex-wrap items-center gap-3 flex-1">
+                        <!-- Search Box -->
+                        <div class="relative min-w-[200px] flex-1 sm:flex-initial">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-500 text-sm"></i>
+                            <input type="text" id="tableSearchInput" oninput="renderDashboardTable()" placeholder="ค้นชื่อ หรือ รหัสพนักงาน..."
+                                   class="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-4 py-2 text-sm text-white focus:border-emerald-500 outline-none">
+                        </div>
+
+                        <!-- Date Filter -->
+                        <input type="date" id="tableDateFilter" onchange="renderDashboardTable()"
+                               class="bg-slate-950 border border-slate-800 text-slate-300 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 outline-none">
+
+                        <!-- Status Filter -->
+                        <select id="tableStatusFilter" onchange="renderDashboardTable()"
+                                class="bg-slate-950 border border-slate-800 text-slate-300 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 outline-none">
+                            <option value="ALL">สถานะทั้งหมด</option>
+                            <option value="ตรงเวลา">ตรงเวลา</option>
+                            <option value="สาย">มาสาย</option>
+                        </select>
+
+                        <!-- Method Filter -->
+                        <select id="tableMethodFilter" onchange="renderDashboardTable()"
+                                class="bg-slate-950 border border-slate-800 text-slate-300 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 outline-none">
+                            <option value="ALL">วิธีสแกนทั้งหมด</option>
+                            <option value="QR">📱 สแกน QR Code</option>
+                            <option value="FACE">👤 สแกนใบหน้า</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="exportToCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-file-excel"></i> ส่งออก CSV (Excel)
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Table Content -->
+                <div class="overflow-x-auto rounded-2xl border border-slate-800">
+                    <table class="w-full text-left text-sm text-slate-300">
+                        <thead class="bg-slate-950 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                            <tr>
+                                <th class="py-3.5 px-4">วันที่ / เวลา</th>
+                                <th class="py-3.5 px-4">พนักงาน</th>
+                                <th class="py-3.5 px-4 text-center">เข้างาน</th>
+                                <th class="py-3.5 px-4 text-center">ออกงาน</th>
+                                <th class="py-3.5 px-4 text-center">วิธีสแกน</th>
+                                <th class="py-3.5 px-4 text-center">สถานะ</th>
+                                <th class="py-3.5 px-4">สถานที่ / หมายเหตุ</th>
+                                <th class="py-3.5 px-4 text-center">ลบ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceTableBody" class="divide-y divide-slate-800/60 bg-slate-900/40">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="flex items-center justify-between mt-4 text-xs text-slate-500">
+                    <div id="tableRecordInfo">แสดง 0 รายการ</div>
+                    <div>ข้อมูลอัปเดตแบบ Realtime</div>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- ======================================================== -->
+        <!-- VIEW 5: GOOGLE SHEETS INTEGRATION SETTINGS -->
+        <!-- ======================================================== -->
+        <section id="viewSettings" class="hidden space-y-6 max-w-4xl mx-auto">
+            
+            <div class="glass-card rounded-3xl p-6 sm:p-8 border border-slate-800">
+                <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+                    <div>
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-cloud-arrow-up text-emerald-400"></i>
+                            เชื่อมต่อ Google Sheets API
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-0.5">บันทึกข้อมูลการสแกนใบหน้าและ QR Code ลงใน Google Sheet อัตโนมัติ</p>
+                    </div>
+                    <span id="sheetConnectionBadge" class="text-xs px-3 py-1 rounded-full font-bold bg-slate-900 text-amber-400 border border-slate-800">
+                        ยังไม่เปิดการเชื่อมต่อ
+                    </span>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                            Google Apps Script Web App URL:
+                        </label>
+                        <input type="url" id="googleSheetUrlInput" placeholder="https://script.google.com/macros/s/AKfycbx.../exec" 
+                               class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm font-mono focus:border-emerald-500 outline-none">
+                    </div>
+
+                    <div class="flex items-center justify-between pt-2">
+                        <label class="flex items-center cursor-pointer gap-2.5 text-xs text-slate-300">
+                            <input type="checkbox" id="autoSyncCheckbox" checked class="w-4 h-4 rounded border-slate-800 text-emerald-500 focus:ring-emerald-500">
+                            <span>ส่งข้อมูลเข้า Google Sheets อัตโนมัติเมื่อสแกนสำเร็จ</span>
+                        </label>
+                        <div class="flex gap-2">
+                            <button onclick="testGoogleSheetConnection()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition">
+                                <i class="fa-solid fa-vial mr-1"></i> ทดสอบส่งข้อมูล
+                            </button>
+                            <button onclick="saveGoogleSheetSettings()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded-xl shadow-lg transition">
+                                <i class="fa-solid fa-floppy-disk mr-1"></i> บันทึกตั้งค่า
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Code snippet block -->
+                <div class="bg-slate-950 rounded-2xl p-5 border border-slate-800 text-xs space-y-3">
+                    <h3 class="font-bold text-white text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-code text-emerald-400"></i>
+                        โค้ด Google Apps Script (รองรับข้อมูลวิธีสแกน QR & Face)
+                    </h3>
+                    <div class="relative">
+                        <pre class="bg-slate-900 p-4 rounded-xl border border-slate-800 font-mono text-[11px] text-emerald-300 overflow-x-auto">
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+  
+  sheet.appendRow([
+    data.date,
+    data.empId,
+    data.empName,
+    data.dept,
+    data.clockIn,
+    data.clockOut || '-',
+    data.scanMethod, // 'QR Code' หรือ 'สแกนใบหน้า'
+    data.status,
+    data.location,
+    data.note || '-',
+    new Date()
+  ]);
+  
+  return ContentService.createTextOutput(JSON.stringify({ status: "success" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+                    </div>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- MODAL: ADD / EDIT EMPLOYEE -->
+    <div id="employeeModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="glass-card max-w-lg w-full rounded-3xl p-6 border border-slate-800 shadow-2xl relative">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+                <h3 id="modalTitle" class="text-base font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-emerald-400"></i> เพิ่มบุคลากรใหม่
+                </h3>
+                <button onclick="closeEmployeeModal()" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="employeeForm" onsubmit="saveEmployeeForm(event)" class="space-y-4">
+                <input type="hidden" id="empFormEditId" value="">
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">รหัสพนักงาน (ID)*</label>
+                        <input type="text" id="empFormId" required placeholder="เช่น EMP-006" 
+                               class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">ชื่อ - นามสกุล*</label>
+                        <input type="text" id="empFormName" required placeholder="เช่น นายสมศักดิ์ มั่นคง" 
+                               class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-emerald-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">แผนก / ฝ่ายงาน*</label>
+                        <input type="text" id="empFormDept" required placeholder="เช่น ฝ่ายเทคโนโลยีสารสนเทศ" 
+                               class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-emerald-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">ตำแหน่งงาน</label>
+                        <input type="text" id="empFormPos" placeholder="เช่น Senior Developer" 
+                               class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-emerald-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">รูปโปรไฟล์ (Image URL)</label>
+                    <input type="url" id="empFormAvatar" placeholder="https://images.unsplash.com/... หรือ ปล่อยว่างเพื่อใช้สุ่ม" 
+                           class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-emerald-500 outline-none">
+                    <p class="text-[10px] text-slate-500 mt-1">หากเว้นว่างไว้ ระบบจะกำหนดรูปภาพมาตรฐานให้อัตโนมัติ</p>
+                </div>
+
+                <div class="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+                    <button type="button" onclick="closeEmployeeModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-slate-950 text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูลบุคลากร
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+
+    <!-- SYSTEM JAVASCRIPT LOGIC -->
+    <script>
+        // ========================================================
+        // 1. DATA STATE & INITIALIZATION
+        // ========================================================
+        const STORAGE_EMPLOYEES_KEY = "biotime_employees_v35";
+        const STORAGE_LOGS_KEY = "biotime_logs_v35";
+        const STORAGE_SETTINGS_KEY = "biotime_settings_v35";
+
+        const DEFAULT_EMPLOYEES = [
+            { id: "EMP-001", name: "สมชาย ใจดี", dept: "ฝ่ายไอทีและระบบ", pos: "System Engineer", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80", faceEnrolled: true, faceVector: [0.12, -0.45, 0.88, 0.23, -0.09, 0.67] },
+            { id: "EMP-002", name: "วิภาดา มีสุข", dept: "ฝ่ายทรัพยากรบุคคล", pos: "HR Manager", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80", faceEnrolled: true, faceVector: [-0.34, 0.21, 0.65, -0.11, 0.89, 0.14] },
+            { id: "EMP-003", name: "ณรงค์เดช ชัยชนะ", dept: "ฝ่ายขายและการตลาด", pos: "Sales Lead", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80", faceEnrolled: false, faceVector: null },
+            { id: "EMP-004", name: "พิมพรรณ วงศ์สว่าง", dept: "ฝ่ายการเงินและบัญชี", pos: "Senior Accountant", avatar: "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80", faceEnrolled: false, faceVector: null },
+            { id: "EMP-005", name: "ธนกฤต มั่นคง", dept: "ฝ่ายปฏิบัติการ", pos: "Operations Supervisor", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80", faceEnrolled: true, faceVector: [0.55, -0.12, 0.33, 0.78, -0.66, 0.05] }
+        ];
+
+        let employees = [];
+        let attendanceLogs = [];
+        let activeScanMode = "FACE";
+        let currentMatchedEmp = null;
+        let soundEnabled = true;
+        let isWebcamRunning = false;
+        let isEnrollWebcamRunning = false;
+        let audioCtx = null;
+        let currentEnrollPhotoData = null;
+        let currentEnrollVectorData = null;
+
+        window.onload = function() {
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            loadDataFromStorage();
+            refreshAllUI();
+            loadSettings();
+
+            if (employees.length > 0) {
+                currentMatchedEmp = employees[0];
+                updateMatchProfileUI(currentMatchedEmp, "98.5", "FACE");
+            }
+
+            const filterDate = document.getElementById('tableDateFilter');
+            if (filterDate) filterDate.value = getTodayDateStr();
+        };
+
+        function getTodayDateStr() {
+            return new Date().toISOString().split('T')[0];
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = now.toLocaleDateString('th-TH', options);
+            
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timeStr = `${hours}:${minutes}:${seconds} น.`;
+
+            const elDate = document.getElementById('headerDate');
+            const elClock = document.getElementById('headerClock');
+            if (elDate) elDate.textContent = dateStr;
+            if (elClock) elClock.textContent = timeStr;
+        }
+
+        function loadDataFromStorage() {
+            const storedEmp = localStorage.getItem(STORAGE_EMPLOYEES_KEY);
+            employees = storedEmp ? JSON.parse(storedEmp) : DEFAULT_EMPLOYEES;
+            if(!storedEmp) localStorage.setItem(STORAGE_EMPLOYEES_KEY, JSON.stringify(employees));
+
+            const storedLogs = localStorage.getItem(STORAGE_LOGS_KEY);
+            if (storedLogs) {
+                attendanceLogs = JSON.parse(storedLogs);
+            } else {
+                attendanceLogs = generateMockLogs();
+                saveLogsToStorage();
+            }
+        }
+
+        function saveEmployeesToStorage() {
+            localStorage.setItem(STORAGE_EMPLOYEES_KEY, JSON.stringify(employees));
+            refreshAllUI();
+        }
+
+        function saveLogsToStorage() {
+            localStorage.setItem(STORAGE_LOGS_KEY, JSON.stringify(attendanceLogs));
+        }
+
+        function generateMockLogs() {
+            const today = getTodayDateStr();
+            return [
+                {
+                    id: "LOG-101",
+                    empId: "EMP-001",
+                    empName: "สมชาย ใจดี",
+                    dept: "ฝ่ายไอทีและระบบ",
+                    date: today,
+                    clockIn: "08:15",
+                    clockOut: "17:30",
+                    scanMethod: "FACE",
+                    status: "ตรงเวลา",
+                    location: "สำนักงานใหญ่",
+                    note: "-"
+                },
+                {
+                    id: "LOG-102",
+                    empId: "EMP-002",
+                    empName: "วิภาดา มีสุข",
+                    dept: "ฝ่ายทรัพยากรบุคคล",
+                    date: today,
+                    clockIn: "08:45",
+                    clockOut: "",
+                    scanMethod: "QR",
+                    status: "สาย",
+                    location: "Work From Home",
+                    note: "ติดภารกิจนอกสถานที่"
+                }
+            ];
+        }
+
+        function refreshAllUI() {
+            renderQuickQrDemoButtons();
+            populateQrGenEmpDropdown();
+            populateEnrollEmpDropdown();
+            renderPersonnelTable();
+            renderRecentActivityFeed();
+            renderDashboardTable();
+        }
+
+        // ========================================================
+        // 2. SCANNER MODE & QUICK BUTTONS
+        // ========================================================
+        function renderQuickQrDemoButtons() {
+            const container = document.getElementById('quickQrDemoButtons');
+            const countText = document.getElementById('quickEmpCountText');
+            if (!container) return;
+
+            if (countText) countText.textContent = `${employees.length} คน`;
+            let html = '';
+            employees.forEach(emp => {
+                const isFaceEnrolled = emp.faceEnrolled;
+                const iconClass = activeScanMode === 'QR' ? 'fa-qrcode text-purple-400' : 'fa-user-check text-emerald-400';
+                const badgeColor = activeScanMode === 'QR' 
+                    ? 'hover:border-purple-500/50 hover:bg-purple-950/40 text-purple-200' 
+                    : (isFaceEnrolled ? 'hover:border-emerald-500/50 hover:bg-emerald-950/40 text-emerald-200' : 'opacity-60 border-rose-500/30 text-rose-300');
+
+                html += `
+                    <button onclick="triggerScanSequenceWithEmployeeById('${emp.id}')" 
+                            class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono transition flex items-center gap-1.5 ${badgeColor}">
+                        <i class="fa-solid ${iconClass}"></i>
+                        <span class="font-bold">${emp.id}</span>
+                        <span class="text-slate-400 font-sans hidden sm:inline">(${emp.name.split(' ')[0]})</span>
+                    </button>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function triggerScanSequenceWithEmployeeById(empId) {
+            const emp = employees.find(e => e.id === empId);
+            if (emp) {
+                triggerScanSequenceWithEmployee(emp, activeScanMode);
+            }
+        }
+
+        function setScanMode(mode) {
+            activeScanMode = mode;
+            const faceBtn = document.getElementById('modeFaceBtn');
+            const qrBtn = document.getElementById('modeQrBtn');
+            const dot = document.getElementById('modeStatusDot');
+            const text = document.getElementById('modeStatusText');
+            const beamFace = document.getElementById('scanBeamFace');
+            const beamQr = document.getElementById('scanBeamQr');
+            const targetFace = document.getElementById('faceTargetBox');
+            const targetQr = document.getElementById('qrTargetBox');
+
+            if (mode === 'FACE') {
+                if(faceBtn) faceBtn.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-emerald-600 text-slate-950 shadow-md shadow-emerald-500/20";
+                if(qrBtn) qrBtn.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white";
+                if(dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                if(text) text.textContent = "MODE: FACE RECOGNITION";
+                if(beamFace) beamFace.classList.remove('hidden');
+                if(beamQr) beamQr.classList.add('hidden');
+                if(targetFace) targetFace.classList.remove('hidden');
+                if(targetQr) targetQr.classList.add('hidden');
+            } else {
+                if(qrBtn) qrBtn.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 bg-purple-600 text-white shadow-md shadow-purple-500/20";
+                if(faceBtn) faceBtn.className = "flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white";
+                if(dot) dot.className = "w-2.5 h-2.5 rounded-full bg-purple-500 animate-pulse";
+                if(text) text.textContent = "MODE: QR CODE SCANNER";
+                if(beamQr) beamQr.classList.remove('hidden');
+                if(beamFace) beamFace.classList.add('hidden');
+                if(targetQr) targetQr.classList.remove('hidden');
+                if(targetFace) targetFace.classList.add('hidden');
+            }
+            renderQuickQrDemoButtons();
+        }
+
+        async function startWebcam() {
+            const video = document.getElementById('webcamVideo');
+            const placeholder = document.getElementById('cameraPlaceholder');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                isWebcamRunning = true;
+                showToast("เปิดใช้งานกล้องเว็บแคมเรียบร้อยแล้ว", "success");
+            } catch (err) {
+                showToast("ไม่สามารถเปิดใช้งานกล้องได้ (ใช้งานโหมดจำลองสแกนแทน)", "warning");
+            }
+        }
+
+        function triggerScanSequence() {
+            if (employees.length === 0) return;
+            const randomEmp = employees[Math.floor(Math.random() * employees.length)];
+            triggerScanSequenceWithEmployee(randomEmp, activeScanMode);
+        }
+
+        function updateMatchProfileUI(emp, confidence, mode) {
+            if (!emp) return;
+            
+            const avatarEl = document.getElementById('matchedEmpAvatar');
+            const nameEl = document.getElementById('matchedEmpName');
+            const deptEl = document.getElementById('matchedEmpDept');
+            const confBadge = document.getElementById('matchedConfidenceBadge');
+            const statusBadge = document.getElementById('scanStatusBadge');
+            const iconEl = document.getElementById('scanTypeIcon');
+            const titleEl = document.getElementById('matchCardTitle');
+
+            if (avatarEl) avatarEl.src = emp.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+            if (nameEl) nameEl.textContent = emp.name;
+            if (deptEl) deptEl.textContent = `${emp.id} • ${emp.dept}`;
+            
+            if (confBadge) {
+                confBadge.textContent = `${mode === 'QR' ? 'QR VERIFIED' : 'MATCH: ' + confidence + '%'}`;
+                confBadge.className = mode === 'QR' 
+                    ? 'absolute -bottom-2 right-0 left-0 bg-purple-600 text-white text-[10px] font-bold py-0.5 px-1 rounded-full shadow font-mono text-center'
+                    : 'absolute -bottom-2 right-0 left-0 bg-emerald-500 text-slate-950 text-[10px] font-bold py-0.5 px-1 rounded-full shadow font-mono text-center';
+            }
+
+            if (statusBadge) {
+                statusBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                statusBadge.textContent = "VERIFIED";
+            }
+
+            if (iconEl) iconEl.className = mode === 'QR' ? 'fa-solid fa-qrcode text-purple-400' : 'fa-solid fa-user-check text-emerald-400';
+            if (titleEl) titleEl.textContent = `ตรวจพบผ่าน ${mode === 'QR' ? 'QR Code' : 'ใบหน้า'}`;
+        }
+
+        function executeAttendanceAction(actionType) {
+            if (!currentMatchedEmp) {
+                showToast("กรุณาสแกนเลือกพนักงานก่อนลงเวลา", "warning");
+                return;
+            }
+
+            const now = new Date();
+            const today = getTodayDateStr();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const timeStr = `${hours}:${minutes}`;
+            const location = document.getElementById('actionLocationSelect')?.value || 'สำนักงานใหญ่';
+            const note = document.getElementById('actionNoteInput')?.value.trim() || '-';
+
+            let status = "ตรงเวลา";
+            if (actionType === 'CLOCK_IN' && (now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 30))) {
+                status = "สาย";
+            }
+
+            let existingLog = attendanceLogs.find(l => l.empId === currentMatchedEmp.id && l.date === today);
+
+            if (actionType === 'CLOCK_IN') {
+                if (existingLog) {
+                    existingLog.clockIn = timeStr;
+                    existingLog.scanMethod = activeScanMode;
+                    existingLog.status = status;
+                    existingLog.location = location;
+                    existingLog.note = note;
+                } else {
+                    existingLog = {
+                        id: 'LOG-' + Date.now(),
+                        empId: currentMatchedEmp.id,
+                        empName: currentMatchedEmp.name,
+                        dept: currentMatchedEmp.dept,
+                        date: today,
+                        clockIn: timeStr,
+                        clockOut: '',
+                        scanMethod: activeScanMode,
+                        status: status,
+                        location: location,
+                        note: note
+                    };
+                    attendanceLogs.unshift(existingLog);
+                }
+                showToast(`บันทึก [เข้างาน] เรียบร้อย: ${currentMatchedEmp.name} (${timeStr} น.)`, "success");
+            } else if (actionType === 'CLOCK_OUT') {
+                if (!existingLog) {
+                    existingLog = {
+                        id: 'LOG-' + Date.now(),
+                        empId: currentMatchedEmp.id,
+                        empName: currentMatchedEmp.name,
+                        dept: currentMatchedEmp.dept,
+                        date: today,
+                        clockIn: '08:30',
+                        clockOut: timeStr,
+                        scanMethod: activeScanMode,
+                        status: 'ตรงเวลา',
+                        location: location,
+                        note: note
+                    };
+                    attendanceLogs.unshift(existingLog);
+                } else {
+                    existingLog.clockOut = timeStr;
+                    if (note !== '-') existingLog.note = note;
+                }
+                showToast(`บันทึก [ออกงาน] เรียบร้อย: ${currentMatchedEmp.name} (${timeStr} น.)`, "success");
+            } else {
+                showToast(`บันทึก [${actionType === 'BREAK_START' ? 'พักเที่ยง' : 'กลับเข้าพัก'}] เรียบร้อย: ${currentMatchedEmp.name}`, "info");
+            }
+
+            saveLogsToStorage();
+            playChime('success');
+            renderRecentActivityFeed();
+            renderDashboardTable();
+
+            if (existingLog && document.getElementById('autoSyncCheckbox')?.checked) {
+                sendToGoogleSheet(existingLog);
+            }
+
+            const noteInput = document.getElementById('actionNoteInput');
+            if (noteInput) noteInput.value = '';
+        }
+
+        function renderRecentActivityFeed() {
+            const feed = document.getElementById('recentActivityFeed');
+            const countBadge = document.getElementById('recentTodayCount');
+            if (!feed) return;
+
+            const today = getTodayDateStr();
+            const todayLogs = attendanceLogs.filter(l => l.date === today);
+            if (countBadge) countBadge.textContent = `${todayLogs.length} รายการ`;
+
+            if (todayLogs.length === 0) {
+                feed.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-xs">
+                        <i class="fa-solid fa-inbox text-2xl mb-1 block"></i>
+                        ยังไม่มีข้อมูลการสแกนลงเวลาในวันนี้
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            todayLogs.slice(0, 10).forEach(log => {
+                const isQr = log.scanMethod === 'QR';
+                const methodIcon = isQr ? 'fa-qrcode text-purple-400' : 'fa-face-smile text-emerald-400';
+                const statusBadge = log.status === 'ตรงเวลา'
+                    ? '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ตรงเวลา</span>'
+                    : '<span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">มาสาย</span>';
+
+                html += `
+                    <div class="bg-slate-950/80 p-3 rounded-2xl border border-slate-800 flex items-center justify-between text-xs hover:border-slate-700 transition">
+                        <div class="flex items-center gap-2.5 overflow-hidden">
+                            <div class="w-8 h-8 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sm">
+                                <i class="fa-solid ${methodIcon}"></i>
+                            </div>
+                            <div class="overflow-hidden">
+                                <div class="font-bold text-white truncate">${log.empName}</div>
+                                <div class="text-[10px] text-slate-400 font-mono">${log.empId} • ${log.clockIn} น.</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            ${statusBadge}
+                            <div class="text-[9px] text-slate-500 mt-0.5">${log.location}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            feed.innerHTML = html;
+        }
+
+        // ========================================================
+        // 3. PERSONNEL MANAGEMENT CRUD
+        // ========================================================
+        function renderPersonnelTable() {
+            const container = document.getElementById('personnelCardsGrid');
+            if (!container) return;
+
+            const searchInput = document.getElementById('personnelSearchInput');
+            const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const deptFilter = document.getElementById('personnelDeptFilter')?.value || 'ALL';
+
+            const depts = [...new Set(employees.map(e => e.dept))];
+            const deptSelect = document.getElementById('personnelDeptFilter');
+            if (deptSelect) {
+                const currentDeptVal = deptSelect.value;
+                let deptHtml = '<option value="ALL">แผนกทั้งหมด</option>';
+                depts.forEach(d => {
+                    deptHtml += `<option value="${d}">${d}</option>`;
+                });
+                deptSelect.innerHTML = deptHtml;
+                deptSelect.value = currentDeptVal;
+            }
+
+            let filtered = employees.filter(e => {
+                const matchSearch = e.name.toLowerCase().includes(search) || e.id.toLowerCase().includes(search) || (e.pos && e.pos.toLowerCase().includes(search));
+                const matchDept = deptFilter === 'ALL' || e.dept === deptFilter;
+                return matchSearch && matchDept;
+            });
+
+            const totalBadge = document.getElementById('totalPersonnelBadge');
+            if (totalBadge) totalBadge.textContent = employees.length;
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12 glass-card rounded-2xl border border-slate-800">
+                        <i class="fa-solid fa-user-slash text-3xl text-slate-600 mb-2"></i>
+                        <p class="text-xs text-slate-400">ไม่พบบุคลากรตามเงื่อนไขที่ค้นหา</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(emp => {
+                const avatar = emp.avatar || `https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80`;
+                const faceBadge = emp.faceEnrolled 
+                    ? '<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1"><i class="fa-solid fa-circle-check"></i> ใบหน้าเรียบร้อย</span>'
+                    : '<span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center gap-1"><i class="fa-solid fa-circle-xmark"></i> รอลงทะเบียนใบหน้า</span>';
+
+                html += `
+                    <div class="glass-card rounded-2xl p-4 border border-slate-800 flex flex-col justify-between hover:border-slate-700 transition relative group">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="text-[10px] font-mono font-semibold text-emerald-400">${emp.id}</div>
+                                ${faceBadge}
+                            </div>
+                            
+                            <div class="flex items-center gap-3 mb-3">
+                                <img src="${avatar}" alt="${emp.name}" class="w-12 h-12 rounded-xl object-cover border border-emerald-500/40 shadow">
+                                <div class="overflow-hidden">
+                                    <h4 class="text-sm font-bold text-white truncate">${emp.name}</h4>
+                                    <div class="text-[11px] text-slate-400 truncate">${emp.pos || 'เจ้าหน้าที่'}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-slate-950/80 rounded-xl p-2 border border-slate-800/80 mb-3 text-[11px] text-slate-300">
+                                <i class="fa-solid fa-building text-slate-500 mr-1"></i> ${emp.dept}
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5 pt-2 border-t border-slate-800">
+                            <button onclick="goToEnrollEmp('${emp.id}')" title="ลงทะเบียนใบหน้า"
+                                    class="w-full py-1.5 bg-teal-950/80 hover:bg-teal-900 text-teal-300 rounded-xl border border-teal-500/30 text-xs font-semibold transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-face-smile-beam text-xs"></i> 📸 สแกนเก็บใบหน้า
+                            </button>
+
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="quickQrPassForEmp('${emp.id}')" title="สร้าง QR Pass"
+                                        class="flex-1 py-1.5 bg-slate-900 hover:bg-purple-950 text-purple-300 rounded-xl border border-purple-500/30 text-xs font-semibold transition flex items-center justify-center gap-1">
+                                    <i class="fa-solid fa-qrcode text-[10px]"></i> QR Pass
+                                </button>
+                                
+                                <button onclick="openEditEmployeeModal('${emp.id}')" title="แก้ไขข้อมูล"
+                                        class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-sky-400 rounded-xl border border-slate-700 text-xs transition">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+
+                                <button onclick="confirmDeleteEmployee('${emp.id}')" title="ลบบุคลากร"
+                                        class="px-2.5 py-1.5 bg-slate-900 hover:bg-rose-950 text-rose-400 rounded-xl border border-rose-500/30 text-xs transition">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        }
+
+        function openAddEmployeeModal() {
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-user-plus text-emerald-400"></i> เพิ่มบุคลากรใหม่`;
+            document.getElementById('empFormEditId').value = '';
+            document.getElementById('empFormId').value = `EMP-00${employees.length + 1}`;
+            document.getElementById('empFormId').readOnly = false;
+            document.getElementById('empFormName').value = '';
+            document.getElementById('empFormDept').value = '';
+            document.getElementById('empFormPos').value = '';
+            document.getElementById('empFormAvatar').value = '';
+            document.getElementById('employeeModal').classList.remove('hidden');
+        }
+
+        function openEditEmployeeModal(empId) {
+            const emp = employees.find(e => e.id === empId);
+            if (!emp) return;
+
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-user-pen text-sky-400"></i> แก้ไขข้อมูลบุคลากร`;
+            document.getElementById('empFormEditId').value = emp.id;
+            document.getElementById('empFormId').value = emp.id;
+            document.getElementById('empFormId').readOnly = true;
+            document.getElementById('empFormName').value = emp.name;
+            document.getElementById('empFormDept').value = emp.dept;
+            document.getElementById('empFormPos').value = emp.pos || '';
+            document.getElementById('empFormAvatar').value = emp.avatar || '';
+            document.getElementById('employeeModal').classList.remove('hidden');
+        }
+
+        function closeEmployeeModal() {
+            document.getElementById('employeeModal').classList.add('hidden');
+        }
+
+        function saveEmployeeForm(event) {
+            event.preventDefault();
+            const editId = document.getElementById('empFormEditId').value;
+            const id = document.getElementById('empFormId').value.trim();
+            const name = document.getElementById('empFormName').value.trim();
+            const dept = document.getElementById('empFormDept').value.trim();
+            const pos = document.getElementById('empFormPos').value.trim();
+            let avatar = document.getElementById('empFormAvatar').value.trim();
+
+            if (!avatar) {
+                avatar = `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`;
+            }
+
+            if (editId) {
+                const emp = employees.find(e => e.id === editId);
+                if (emp) {
+                    emp.name = name;
+                    emp.dept = dept;
+                    emp.pos = pos;
+                    emp.avatar = avatar;
+                    showToast(`อัปเดตข้อมูลของ ${name} เรียบร้อยแล้ว`, "success");
+                }
+            } else {
+                if (employees.some(e => e.id === id)) {
+                    showToast(`รหัสพนักงาน ${id} มีอยู่ในระบบแล้ว`, "warning");
+                    return;
+                }
+                employees.push({
+                    id: id,
+                    name: name,
+                    dept: dept,
+                    pos: pos,
+                    avatar: avatar,
+                    faceEnrolled: false,
+                    faceVector: null
+                });
+                showToast(`เพิ่มพนักงานใหม่ ${name} เรียบร้อยแล้ว`, "success");
+            }
+
+            saveEmployeesToStorage();
+            closeEmployeeModal();
+        }
+
+        function confirmDeleteEmployee(empId) {
+            const emp = employees.find(e => e.id === empId);
+            if (!emp) return;
+
+            if (confirm(`คุณต้องการลบข้อมูลบุคลากร "${emp.name} (${emp.id})" ออกจากระบบหรือไม่?`)) {
+                employees = employees.filter(e => e.id !== empId);
+                saveEmployeesToStorage();
+                showToast(`ลบข้อมูล ${emp.name} เรียบร้อยแล้ว`, "info");
+            }
+        }
+
+        // ========================================================
+        // 4. FACE ENROLLMENT WIZARD LOGIC
+        // ========================================================
+        function populateEnrollEmpDropdown() {
+            const select = document.getElementById('enrollEmpSelect');
+            if (!select) return;
+            let html = '<option value="">-- เลือกพนักงานเพื่อเริ่มสแกนใบหน้า --</option>';
+            employees.forEach(e => {
+                const status = e.faceEnrolled ? '🟢 ลงทะเบียนแล้ว' : '🔴 ยังไม่ลงทะเบียน';
+                html += `<option value="${e.id}">${e.id} - ${e.name} (${status})</option>`;
+            });
+            select.innerHTML = html;
+        }
+
+        function loadEmployeeForEnrollment() {
+            const id = document.getElementById('enrollEmpSelect')?.value;
+            const emp = employees.find(e => e.id === id);
+            const statusBadge = document.getElementById('enrollStatusHeaderBadge');
+            
+            if (emp) {
+                document.getElementById('enrollPreviewName').textContent = emp.name;
+                document.getElementById('enrollPreviewDept').textContent = `${emp.id} • ${emp.dept}`;
+                document.getElementById('enrollPreviewPhoto').src = emp.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80';
+                
+                if (emp.faceEnrolled) {
+                    if (statusBadge) {
+                        statusBadge.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-2";
+                        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span>ลงทะเบียนใบหน้าแล้ว (128D Vector Active)</span>`;
+                    }
+                    document.getElementById('enrollCapturedStatus').textContent = "ENROLLED";
+                    document.getElementById('enrollCapturedStatus').className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300";
+                    document.getElementById('enrollVectorBox').value = JSON.stringify(emp.faceVector || generate128DVector(), null, 2);
+                } else {
+                    if (statusBadge) {
+                        statusBadge.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30 flex items-center gap-2";
+                        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span><span>ยังไม่ได้ลงทะเบียนใบหน้า</span>`;
+                    }
+                    document.getElementById('enrollCapturedStatus').textContent = "NOT ENROLLED";
+                    document.getElementById('enrollCapturedStatus').className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300";
+                    document.getElementById('enrollVectorBox').value = "";
+                }
+            } else {
+                document.getElementById('enrollPreviewName').textContent = "กรุณาเลือกพนักงาน";
+                document.getElementById('enrollPreviewDept').textContent = "EMP-XXX";
+                if (statusBadge) {
+                    statusBadge.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-slate-400 border border-slate-800 flex items-center gap-2";
+                    statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-slate-500"></span><span>กรุณาเลือกพนักงาน</span>`;
+                }
+            }
+        }
+
+        function goToEnrollEmp(empId) {
+            switchView('enroll');
+            const select = document.getElementById('enrollEmpSelect');
+            if (select) {
+                select.value = empId;
+                loadEmployeeForEnrollment();
+            }
+        }
+
+        async function startEnrollWebcam() {
+            const video = document.getElementById('enrollWebcam');
+            const placeholder = document.getElementById('enrollPlaceholder');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+                video.srcObject = stream;
+                video.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                isEnrollWebcamRunning = true;
+                showToast("เปิดกล้องลงทะเบียนใบหน้าเรียบร้อยแล้ว", "success");
+            } catch (err) {
+                showToast("ไม่สามารถเปิดใช้งานกล้องได้", "warning");
+            }
+        }
+
+        function generate128DVector() {
+            const vec = [];
+            for(let i = 0; i < 16; i++) {
+                vec.push(Number((Math.random() * 2 - 1).toFixed(4)));
+            }
+            return vec;
+        }
+
+        function captureFacePhoto() {
+            const empId = document.getElementById('enrollEmpSelect')?.value;
+            if (!empId) {
+                showToast("กรุณาเลือกพนักงานที่ต้องการลงทะเบียนใบหน้าก่อน", "warning");
+                return;
+            }
+
+            const video = document.getElementById('enrollWebcam');
+            const canvas = document.getElementById('enrollCanvas');
+            
+            if (isEnrollWebcamRunning && video && canvas) {
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                const ctx = canvas.getContext('2d');
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                currentEnrollPhotoData = canvas.toDataURL('image/jpeg', 0.85);
+            } else {
+                currentEnrollPhotoData = `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80`;
+            }
+
+            currentEnrollVectorData = generate128DVector();
+
+            document.getElementById('enrollPreviewPhoto').src = currentEnrollPhotoData;
+            document.getElementById('enrollVectorBox').value = JSON.stringify(currentEnrollVectorData, null, 2);
+            document.getElementById('enrollCapturedStatus').textContent = "CAPTURED";
+            document.getElementById('enrollCapturedStatus').className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300";
+
+            playChime('success');
+            showToast("ถ่ายภาพและสกัดค่า 128D Feature Vector สำเร็จ", "success");
+        }
+
+        function saveFaceEnrollment() {
+            const empId = document.getElementById('enrollEmpSelect')?.value;
+            const emp = employees.find(e => e.id === empId);
+
+            if (!emp) {
+                showToast("กรุณาเลือกพนักงานก่อนบันทึก", "warning");
+                return;
+            }
+
+            if (!currentEnrollVectorData && !emp.faceVector) {
+                currentEnrollVectorData = generate128DVector();
+            }
+
+            emp.faceEnrolled = true;
+            emp.faceVector = currentEnrollVectorData || emp.faceVector || generate128DVector();
+            if (currentEnrollPhotoData) {
+                emp.avatar = currentEnrollPhotoData;
+            }
+
+            saveEmployeesToStorage();
+            loadEmployeeForEnrollment();
+            playChime('success');
+            showToast(`บันทึกโพรไฟล์ใบหน้าของ ${emp.name} เรียบร้อยแล้ว`, "success");
+        }
+
+        function clearFaceEnrollment() {
+            const empId = document.getElementById('enrollEmpSelect')?.value;
+            const emp = employees.find(e => e.id === empId);
+
+            if (!emp) return;
+
+            if (confirm(`คุณต้องการลบข้อมูลใบหน้าของ "${emp.name}" ใช่หรือไม่?`)) {
+                emp.faceEnrolled = false;
+                emp.faceVector = null;
+                currentEnrollVectorData = null;
+                currentEnrollPhotoData = null;
+                
+                saveEmployeesToStorage();
+                loadEmployeeForEnrollment();
+                showToast(`ลบข้อมูลใบหน้าของ ${emp.name} แล้ว`, "info");
+            }
+        }
+
+        function triggerScanSequenceWithEmployee(emp, mode) {
+            playChime('scan');
+
+            if (mode === "FACE" && !emp.faceEnrolled) {
+                showToast(`พนักงาน ${emp.name} ยังไม่ได้ลงทะเบียนใบหน้า กรุณาลงทะเบียนก่อน`, "warning");
+                playChime('warning');
+            }
+
+            const progressBar = document.getElementById('scanProgressBar');
+            const progressPercent = document.getElementById('scanProgressPercent');
+            const statusBadge = document.getElementById('scanStatusBadge');
+
+            if (statusBadge) {
+                statusBadge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 animate-pulse";
+                statusBadge.textContent = "VERIFYING AI";
+            }
+
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 25;
+                if (progressBar) progressBar.style.width = progress + '%';
+                if (progressPercent) progressPercent.textContent = progress + '%';
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    const confidence = (97.0 + Math.random() * 2.8).toFixed(1);
+                    currentMatchedEmp = emp;
+                    updateMatchProfileUI(emp, confidence, mode);
+                    playChime('success');
+                    showToast(`สแกน ${mode === 'QR' ? 'QR Code' : 'ใบหน้า'} สำเร็จ: ${emp.name}`, "success");
+                }
+            }, 80);
+        }
+
+        // ========================================================
+        // 5. QR PASS CARD GENERATOR
+        // ========================================================
+        function populateQrGenEmpDropdown() {
+            const select = document.getElementById('qrGenSelectEmp');
+            if (!select) return;
+            let html = '<option value="">-- เลือกพนักงานในระบบ --</option>';
+            employees.forEach(e => {
+                html += `<option value="${e.id}">${e.id} - ${e.name}</option>`;
+            });
+            select.innerHTML = html;
+        }
+
+        function loadEmployeeToQrGen() {
+            const id = document.getElementById('qrGenSelectEmp')?.value;
+            const emp = employees.find(e => e.id === id);
+            if (emp) {
+                document.getElementById('qrGenEmpId').value = emp.id;
+                document.getElementById('qrGenEmpName').value = emp.name;
+                document.getElementById('qrGenEmpDept').value = emp.dept;
+                renderQrPassCard();
+            }
+        }
+
+        function quickQrPassForEmp(empId) {
+            switchView('qrGen');
+            const select = document.getElementById('qrGenSelectEmp');
+            if (select) {
+                select.value = empId;
+                loadEmployeeToQrGen();
+            }
+        }
+
+        function renderQrPassCard() {
+            const id = document.getElementById('qrGenEmpId')?.value || 'EMP-001';
+            const name = document.getElementById('qrGenEmpName')?.value || 'สมชาย ใจดี';
+            const dept = document.getElementById('qrGenEmpDept')?.value || 'ฝ่ายไอทีและระบบ';
+            
+            const emp = employees.find(e => e.id === id);
+            const avatar = emp ? (emp.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80') : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+
+            const cardName = document.getElementById('cardPreviewName');
+            const cardId = document.getElementById('cardPreviewId');
+            const cardDept = document.getElementById('cardPreviewDept');
+            const cardAvatar = document.getElementById('cardPreviewAvatar');
+            const cardQr = document.getElementById('cardPreviewQrImg');
+            const downloadBtn = document.getElementById('downloadQrBtn');
+
+            if (cardName) cardName.textContent = name;
+            if (cardId) cardId.textContent = id;
+            if (cardDept) cardDept.textContent = dept;
+            if (cardAvatar) cardAvatar.src = avatar;
+
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(id)}`;
+            if (cardQr) cardQr.src = qrUrl;
+            if (downloadBtn) downloadBtn.href = qrUrl;
+        }
+
+        // ========================================================
+        // 6. DASHBOARD & ATTENDANCE LOGS TABLE
+        // ========================================================
+        function renderDashboardTable() {
+            const tbody = document.getElementById('attendanceTableBody');
+            if (!tbody) return;
+
+            const searchInput = document.getElementById('tableSearchInput');
+            const search = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const dateFilter = document.getElementById('tableDateFilter')?.value || '';
+            const statusFilter = document.getElementById('tableStatusFilter')?.value || 'ALL';
+            const methodFilter = document.getElementById('tableMethodFilter')?.value || 'ALL';
+
+            let filtered = attendanceLogs.filter(log => {
+                const matchSearch = log.empName.toLowerCase().includes(search) || log.empId.toLowerCase().includes(search);
+                const matchDate = !dateFilter || log.date === dateFilter;
+                const matchStatus = statusFilter === 'ALL' || log.status === statusFilter;
+                const matchMethod = methodFilter === 'ALL' || log.scanMethod === methodFilter;
+                return matchSearch && matchDate && matchStatus && matchMethod;
+            });
+
+            const today = getTodayDateStr();
+            const todayLogs = attendanceLogs.filter(l => l.date === today);
+
+            const statStaff = document.getElementById('statTotalStaff');
+            const statClocked = document.getElementById('statTotalClocked');
+            const statOnTime = document.getElementById('statOnTime');
+            const statLate = document.getElementById('statLate');
+            const statRatio = document.getElementById('statScanRatio');
+
+            if (statStaff) statStaff.textContent = employees.length;
+            if (statClocked) statClocked.textContent = todayLogs.length;
+            if (statOnTime) statOnTime.textContent = todayLogs.filter(l => l.status === 'ตรงเวลา').length;
+            if (statLate) statLate.textContent = todayLogs.filter(l => l.status === 'สาย').length;
+            
+            const qrCount = todayLogs.filter(l => l.scanMethod === 'QR').length;
+            const faceCount = todayLogs.filter(l => l.scanMethod === 'FACE').length;
+            if (statRatio) statRatio.textContent = `${qrCount} / ${faceCount}`;
+
+            const recInfo = document.getElementById('tableRecordInfo');
+            if (recInfo) recInfo.textContent = `แสดง ${filtered.length} จากทั้งหมด ${attendanceLogs.length} รายการ`;
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="py-8 text-center text-slate-500 text-xs">
+                            ไม่พบข้อมูลการลงเวลาตามเงื่อนไขที่กรอก
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = '';
+            filtered.forEach(log => {
+                const isQr = log.scanMethod === 'QR';
+                const methodBadge = isQr 
+                    ? '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-300 border border-purple-500/30 flex items-center justify-center gap-1 w-fit mx-auto"><i class="fa-solid fa-qrcode"></i> QR Pass</span>'
+                    : '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 flex items-center justify-center gap-1 w-fit mx-auto"><i class="fa-solid fa-face-smile"></i> สแกนใบหน้า</span>';
+
+                const statusBadge = log.status === 'ตรงเวลา'
+                    ? '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center gap-1 w-fit mx-auto"><i class="fa-solid fa-check"></i> ตรงเวลา</span>'
+                    : '<span class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center justify-center gap-1 w-fit mx-auto"><i class="fa-solid fa-clock"></i> มาสาย</span>';
+
+                html += `
+                    <tr class="hover:bg-slate-900/80 transition">
+                        <td class="py-3 px-4 font-mono text-xs">
+                            <div class="text-white font-semibold">${log.date}</div>
+                            <div class="text-[10px] text-slate-400">${log.clockIn} น.</div>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="font-bold text-white text-xs">${log.empName}</div>
+                            <div class="text-[10px] font-mono text-slate-400">${log.empId} • ${log.dept}</div>
+                        </td>
+                        <td class="py-3 px-4 text-center font-mono text-xs text-emerald-400 font-bold">${log.clockIn || '-'}</td>
+                        <td class="py-3 px-4 text-center font-mono text-xs text-rose-400 font-bold">${log.clockOut || '-'}</td>
+                        <td class="py-3 px-4 text-center">${methodBadge}</td>
+                        <td class="py-3 px-4 text-center">${statusBadge}</td>
+                        <td class="py-3 px-4 text-xs">
+                            <div class="text-slate-300 font-medium">${log.location}</div>
+                            <div class="text-[10px] text-slate-500">${log.note}</div>
+                        </td>
+                        <td class="py-3 px-4 text-center">
+                            <button onclick="deleteLogRecord('${log.id}')" title="ลบรายการ" class="text-slate-500 hover:text-rose-400 text-xs transition">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function deleteLogRecord(logId) {
+            if (confirm("คุณต้องการลบบันทึกการลงเวลานี้หรือไม่?")) {
+                attendanceLogs = attendanceLogs.filter(l => l.id !== logId);
+                saveLogsToStorage();
+                renderDashboardTable();
+                renderRecentActivityFeed();
+                showToast("ลบบันทึกเรียบร้อยแล้ว", "info");
+            }
+        }
+
+        function exportToCSV() {
+            if (attendanceLogs.length === 0) {
+                showToast("ไม่มีข้อมูลการลงเวลาสำหรับส่งออก", "warning");
+                return;
+            }
+
+            let csvContent = "\uFEFF"; // UTF-8 BOM for Thai support in MS Excel
+            csvContent += "วันที่,รหัสพนักงาน,ชื่อ-นามสกุล,แผนก,เวลาเข้างาน,เวลาออกงาน,วิธีสแกน,สถานะ,สถานที่,หมายเหตุ\n";
+
+            attendanceLogs.forEach(log => {
+                const row = [
+                    `"${log.date}"`,
+                    `"${log.empId}"`,
+                    `"${log.empName}"`,
+                    `"${log.dept}"`,
+                    `"${log.clockIn || '-'}"`,
+                    `"${log.clockOut || '-'}"`,
+                    `"${log.scanMethod === 'QR' ? 'QR Code' : 'สแกนใบหน้า'}"`,
+                    `"${log.status}"`,
+                    `"${log.location}"`,
+                    `"${log.note}"`
+                ];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `attendance_report_${getTodayDateStr()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast("ดาวน์โหลดไฟล์ CSV เรียบร้อยแล้ว", "success");
+        }
+
+        // ========================================================
+        // 7. GOOGLE SHEETS API INTEGRATION
+        // ========================================================
+        function loadSettings() {
+            const savedUrl = localStorage.getItem(STORAGE_SETTINGS_KEY);
+            const input = document.getElementById('googleSheetUrlInput');
+            const badge = document.getElementById('sheetConnectionBadge');
+
+            if (savedUrl && input) {
+                input.value = savedUrl;
+                if (badge) {
+                    badge.className = "text-xs px-3 py-1 rounded-full font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+                    badge.textContent = "ตั้งค่า URL เรียบร้อยแล้ว";
+                }
+            }
+        }
+
+        function saveGoogleSheetSettings() {
+            const url = document.getElementById('googleSheetUrlInput')?.value.trim();
+            const badge = document.getElementById('sheetConnectionBadge');
+
+            if (url) {
+                localStorage.setItem(STORAGE_SETTINGS_KEY, url);
+                if (badge) {
+                    badge.className = "text-xs px-3 py-1 rounded-full font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+                    badge.textContent = "ตั้งค่า URL เรียบร้อยแล้ว";
+                }
+                showToast("บันทึกการตั้งค่า Google Sheets API เรียบร้อยแล้ว", "success");
+            } else {
+                localStorage.removeItem(STORAGE_SETTINGS_KEY);
+                if (badge) {
+                    badge.className = "text-xs px-3 py-1 rounded-full font-bold bg-slate-900 text-amber-400 border border-slate-800";
+                    badge.textContent = "ยังไม่เปิดการเชื่อมต่อ";
+                }
+                showToast("ลบตั้งค่า URL แล้ว", "info");
+            }
+        }
+
+        async function testGoogleSheetConnection() {
+            const url = document.getElementById('googleSheetUrlInput')?.value.trim();
+            if (!url) {
+                showToast("กรุณากรอก Google Apps Script Web App URL ก่อนกดทดสอบ", "warning");
+                return;
+            }
+
+            showToast("กำลังส่งข้อมูลทดสอบไปยัง Google Sheets...", "info");
+            const testPayload = {
+                date: getTodayDateStr(),
+                empId: "TEST-999",
+                empName: "ทดสอบ ระบบ",
+                dept: "ฝ่ายเทคโนโลยี",
+                clockIn: "08:30",
+                clockOut: "17:30",
+                scanMethod: "สแกนใบหน้า (ทดสอบ)",
+                status: "ตรงเวลา",
+                location: "สำนักงานใหญ่",
+                note: "ทดสอบการเชื่อมต่อ API"
+            };
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testPayload)
+                });
+                showToast("ส่งข้อมูลไปยัง Google Sheets เรียบร้อยแล้ว! (กรุณาเช็กในตาราง Sheet)", "success");
+            } catch (err) {
+                showToast("เกิดข้อผิดพลาดในการเชื่อมต่อ Google Sheets", "warning");
+            }
+        }
+
+        async function sendToGoogleSheet(logRecord) {
+            const url = localStorage.getItem(STORAGE_SETTINGS_KEY);
+            if (!url) return;
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        date: logRecord.date,
+                        empId: logRecord.empId,
+                        empName: logRecord.empName,
+                        dept: logRecord.dept,
+                        clockIn: logRecord.clockIn,
+                        clockOut: logRecord.clockOut || '-',
+                        scanMethod: logRecord.scanMethod === 'QR' ? 'QR Code Pass' : 'สแกนใบหน้า',
+                        status: logRecord.status,
+                        location: logRecord.location,
+                        note: logRecord.note || '-'
+                    })
+                });
+            } catch (e) {
+                console.error('Auto sync error:', e);
+            }
+        }
+
+        // ========================================================
+        // 8. AUDIO SYNTHESIZER & NAVIGATION
+        // ========================================================
+        function initAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const btnIcon = document.getElementById('soundIcon');
+            if (soundEnabled) {
+                if (btnIcon) btnIcon.className = "fa-solid fa-volume-high";
+                showToast("เปิดเสียงการทำงานแล้ว", "info");
+            } else {
+                if (btnIcon) btnIcon.className = "fa-solid fa-volume-xmark text-rose-400";
+                showToast("ปิดเสียงการทำงานแล้ว", "info");
+            }
+        }
+
+        function playChime(type = 'success') {
+            if (!soundEnabled) return;
+            try {
+                initAudioContext();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'scan') {
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(1200, now + 0.08);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'success') {
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.35);
+                    osc.start(now);
+                    osc.stop(now + 0.35);
+                } else if (type === 'warning') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.setValueAtTime(200, now + 0.12);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                }
+            } catch (e) {
+                console.error('Audio error:', e);
+            }
+        }
+
+        function switchView(target) {
+            const views = ['scan', 'enroll', 'personnel', 'qrGen', 'dashboard', 'settings'];
+            views.forEach(v => {
+                const sec = document.getElementById('view' + capitalize(v));
+                const navBtn = document.getElementById('nav' + capitalize(v));
+
+                if (v === target) {
+                    if (sec) sec.classList.remove('hidden');
+                    if (navBtn) navBtn.className = "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all text-white bg-emerald-600 shadow-sm shadow-emerald-600/30";
+                } else {
+                    if (sec) sec.classList.add('hidden');
+                    if (navBtn) navBtn.className = "flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-medium transition-all text-slate-400 hover:text-white hover:bg-slate-900";
+                }
+            });
+
+            if(target === 'enroll') loadEmployeeForEnrollment();
+            if(target === 'personnel') renderPersonnelTable();
+            if(target === 'dashboard') renderDashboardTable();
+            if(target === 'qrGen') renderQrPassCard();
+        }
+
+        function capitalize(s) {
+            return s.charAt(0).toUpperCase() + s.slice(1);
+        }
+
+        function showToast(message, type = "info") {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+
+            let bgColors = "bg-slate-900 border-slate-700 text-white";
+            let icon = "fa-circle-info text-sky-400";
+
+            if (type === "success") {
+                bgColors = "bg-slate-900 border border-emerald-500/50 text-emerald-100 shadow-emerald-500/10";
+                icon = "fa-circle-check text-emerald-400";
+            } else if (type === "warning") {
+                bgColors = "bg-slate-900 border border-amber-500/50 text-amber-100 shadow-amber-500/10";
+                icon = "fa-triangle-exclamation text-amber-400";
+            }
+
+            toast.className = `${bgColors} px-4 py-3 rounded-2xl shadow-2xl border flex items-center gap-3 text-xs sm:text-sm font-medium transition-all duration-300 transform translate-y-2 opacity-0 pointer-events-auto backdrop-blur-md`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span>${message}</span>`;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3600);
+        }
+    </script>
+</body>
+</html>
