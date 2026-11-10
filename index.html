@@ -34,7 +34,7 @@
         }
     </script>
     
-    <!-- Google Fonts (Prompt & Inter) -->
+    <!-- Google Fonts (Prompt) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -42,7 +42,7 @@
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- html5-qrcode Library -->
+    <!-- html5-qrcode Library for QR Reader & File Scanner -->
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     
     <!-- QRCode Generator Library -->
@@ -52,7 +52,6 @@
         * {
             font-family: 'Prompt', sans-serif;
         }
-        /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -70,180 +69,260 @@
         .hud-border {
             box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
         }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #employee-badge-card, #employee-badge-card * {
+                visibility: visible;
+            }
+            #employee-badge-card {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: 320px;
+            }
+        }
     </style>
 </head>
 <body class="h-full flex flex-col antialiased selection:bg-cyan-500 selection:text-white">
 
     <!-- Top Navigation Header -->
-    <header class="bg-slate-800/80 backdrop-blur border-b border-slate-700/60 sticky top-0 z-30">
+    <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700/60 sticky top-0 z-30 shadow-lg">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Logo & System Title -->
                 <div class="flex items-center space-x-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/30">
-                        <i class="fa-solid font-bold fa-user-check text-xl"></i>
+                        <i class="fa-solid fa-user-check text-xl"></i>
                     </div>
                     <div>
                         <h1 class="text-lg font-bold text-white tracking-wide leading-tight">TimeSync AI</h1>
-                        <p class="text-xs text-cyan-400 font-medium">ระบบลงเวลาปฏิบัติงานอัจฉริยะ</p>
+                        <p class="text-[11px] text-cyan-400 font-medium">ระบบลงเวลาปฏิบัติงาน & Google Sheets Sync</p>
                     </div>
                 </div>
 
-                <!-- Clock & Date Widget -->
-                <div class="hidden md:flex items-center space-x-3 bg-slate-900/60 px-4 py-1.5 rounded-full border border-slate-700/50">
-                    <i class="fa-regular fa-clock text-cyan-400"></i>
-                    <span id="liveClock" class="text-sm font-semibold tracking-wider text-slate-200">00:00:00</span>
-                    <span class="text-slate-600">|</span>
-                    <span id="liveDate" class="text-xs text-slate-400">10 พ.ย. 2026</span>
+                <!-- Clock & Status Bar -->
+                <div class="hidden lg:flex items-center space-x-3">
+                    <!-- Google Sheets Sync Connection Badge -->
+                    <button onclick="openSettingsModal()" id="header-sheets-status" class="px-3 py-1.5 rounded-full border border-slate-700 bg-slate-900/80 text-xs flex items-center space-x-2 hover:border-cyan-500 transition">
+                        <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" id="sync-status-dot"></span>
+                        <span id="sync-status-text" class="text-slate-300 font-medium">ยังไม่ได้ตั้งค่า Google Sheets</span>
+                    </button>
+
+                    <!-- Live Clock -->
+                    <div class="flex items-center space-x-3 bg-slate-900/60 px-4 py-1.5 rounded-full border border-slate-700/50">
+                        <i class="fa-regular fa-clock text-cyan-400"></i>
+                        <span id="liveClock" class="text-sm font-semibold tracking-wider text-slate-200">00:00:00</span>
+                        <span class="text-slate-600">|</span>
+                        <span id="liveDate" class="text-xs text-slate-400">-- พ.ย. ----</span>
+                    </div>
                 </div>
 
                 <!-- Nav Tabs -->
                 <nav class="flex space-x-1 sm:space-x-2">
-                    <button onclick="switchTab('kiosk')" id="tab-kiosk" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-2 bg-cyan-600 text-white">
-                        <i class="fa-solid fa-camera font-normal"></i>
+                    <button onclick="switchTab('kiosk')" id="tab-kiosk" class="nav-tab px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition flex items-center space-x-1.5 bg-cyan-600 text-white">
+                        <i class="fa-solid fa-camera"></i>
                         <span class="hidden sm:inline">ตู้สแกนลงเวลา</span>
                     </button>
-                    <button onclick="switchTab('register')" id="tab-register" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 transition flex items-center space-x-2">
-                        <i class="fa-solid fa-user-plus font-normal"></i>
+                    <button onclick="switchTab('register')" id="tab-register" class="nav-tab px-3 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-user-plus"></i>
                         <span class="hidden sm:inline">ลงทะเบียน</span>
                     </button>
-                    <button onclick="switchTab('history')" id="tab-history" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 transition flex items-center space-x-2">
-                        <i class="fa-solid fa-list-check font-normal"></i>
+                    <button onclick="switchTab('history')" id="tab-history" class="nav-tab px-3 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-list-check"></i>
                         <span class="hidden sm:inline">ประวัติลงเวลา</span>
                     </button>
-                    <button onclick="switchTab('directory')" id="tab-directory" class="nav-tab px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 transition flex items-center space-x-2">
-                        <i class="fa-solid fa-users font-normal"></i>
+                    <button onclick="switchTab('directory')" id="tab-directory" class="nav-tab px-3 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-700/50 transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-users"></i>
                         <span class="hidden sm:inline">รายชื่อพนักงาน</span>
+                    </button>
+                    <button onclick="openSettingsModal()" class="px-3 py-2 rounded-lg text-xs sm:text-sm font-medium text-cyan-400 bg-slate-900 border border-slate-700 hover:bg-slate-800 transition flex items-center space-x-1.5" title="ตั้งค่าระบบ">
+                        <i class="fa-solid fa-gear"></i>
                     </button>
                 </nav>
             </div>
         </div>
     </header>
 
-    <!-- Main Content Body -->
+    <!-- HTTPS Warning Banner (Shown if insecure connection blocks camera) -->
+    <div id="https-warning-banner" class="hidden bg-amber-500/10 border-b border-amber-500/30 px-4 py-2.5 text-xs text-amber-300 flex items-center justify-between">
+        <div class="flex items-center space-x-2 max-w-7xl mx-auto w-full">
+            <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm"></i>
+            <span><strong>ข้อแนะนำเรื่องความปลอดภัย:</strong> เบราว์เซอร์จำกัดการเปิดใช้งานกล้องเฉพาะบน **HTTPS** หรือ **localhost** หากเปิดกล้องไม่ได้ โปรดใช้งานบนระบบ HTTPS หรือเลือกใช้ <strong>โหมดป้อนรหัสพนักงานด้วยตนเอง (Manual Input)</strong></span>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
     <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
         <div class="max-w-7xl mx-auto">
 
             <!-- PAGE 1: KIOSK SCANNING MODE -->
             <section id="page-kiosk" class="page-content space-y-6">
                 
-                <!-- Controls Header: Check-In vs Check-Out & Sound Toggle -->
+                <!-- Controls Header: Check-In vs Check-Out & Mode Switcher -->
                 <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700/70 shadow-xl flex flex-wrap items-center justify-between gap-4">
-                    <!-- Mode Switcher -->
+                    <!-- Check-In / Check-Out Toggle -->
                     <div class="flex items-center bg-slate-900 p-1.5 rounded-xl border border-slate-700/50 w-full sm:w-auto">
-                        <button id="btn-mode-in" onclick="setScanMode('IN')" class="flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center justify-center space-x-2 bg-emerald-600 text-white shadow-lg shadow-emerald-600/30">
+                        <button id="btn-mode-in" onclick="setScanMode('IN')" class="flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-2 bg-emerald-600 text-white shadow-lg shadow-emerald-600/30">
                             <i class="fa-solid fa-right-to-bracket"></i>
                             <span>เข้างาน (Check-In)</span>
                         </button>
-                        <button id="btn-mode-out" onclick="setScanMode('OUT')" class="flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white">
+                        <button id="btn-mode-out" onclick="setScanMode('OUT')" class="flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white">
                             <i class="fa-solid fa-right-from-bracket"></i>
                             <span>ออกงาน (Check-Out)</span>
                         </button>
                     </div>
 
-                    <!-- Scan Type Switcher & Settings -->
-                    <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
-                        <div class="inline-flex rounded-lg bg-slate-900 p-1 border border-slate-700">
-                            <button id="btn-type-face" onclick="setScannerType('face')" class="px-3 py-1.5 rounded-md text-xs font-semibold bg-cyan-600 text-white transition flex items-center space-x-1.5">
+                    <!-- Scanner Type Buttons (Face / QR / Manual) -->
+                    <div class="flex items-center space-x-2 w-full sm:w-auto justify-between sm:justify-end">
+                        <div class="inline-flex rounded-xl bg-slate-900 p-1 border border-slate-700">
+                            <button id="btn-type-face" onclick="setScannerType('face')" class="px-3 py-2 rounded-lg text-xs font-semibold bg-cyan-600 text-white transition flex items-center space-x-1">
                                 <i class="fa-solid fa-face-smile"></i>
                                 <span>สแกนใบหน้า</span>
                             </button>
-                            <button id="btn-type-qr" onclick="setScannerType('qr')" class="px-3 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-white transition flex items-center space-x-1.5">
+                            <button id="btn-type-qr" onclick="setScannerType('qr')" class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition flex items-center space-x-1">
                                 <i class="fa-solid fa-qrcode"></i>
                                 <span>สแกน QR Code</span>
                             </button>
+                            <button id="btn-type-manual" onclick="setScannerType('manual')" class="px-3 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition flex items-center space-x-1">
+                                <i class="fa-solid fa-keyboard"></i>
+                                <span>ป้อนรหัสสำรอง</span>
+                            </button>
                         </div>
 
-                        <!-- Audio Mute Toggle -->
-                        <button id="audio-toggle-btn" onclick="toggleAudio()" title="เปิด/ปิด เสียง" class="w-10 h-10 rounded-xl bg-slate-700/60 hover:bg-slate-700 border border-slate-600 flex items-center justify-center text-cyan-400 transition">
+                        <!-- Mute / Unmute Audio Sound -->
+                        <button id="audio-toggle-btn" onclick="toggleAudio()" title="เปิด/ปิด เสียงสัญญาณ" class="w-10 h-10 rounded-xl bg-slate-700/60 hover:bg-slate-700 border border-slate-600 flex items-center justify-center text-cyan-400 transition">
                             <i id="audio-icon" class="fa-solid fa-volume-high"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- Main Scanner & Live Feed Grid -->
+                <!-- Main Kiosk Layout Grid -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     
-                    <!-- Scanner Interactive Window (8 Cols) -->
+                    <!-- Camera & Interactive Scanner Area (8 Cols) -->
                     <div class="lg:col-span-7 xl:col-span-8 flex flex-col">
                         <div class="bg-slate-800/80 rounded-2xl p-4 sm:p-6 border border-slate-700/80 shadow-2xl flex-1 flex flex-col justify-between relative overflow-hidden">
                             
-                            <!-- Status Bar above Camera -->
+                            <!-- Status Bar above Video -->
                             <div class="flex items-center justify-between mb-3 z-10">
                                 <div class="flex items-center space-x-2">
                                     <span class="relative flex h-3 w-3">
-                                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                      <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                                      <span id="camera-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                      <span id="camera-dot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
                                     </span>
                                     <span id="camera-status" class="text-xs font-medium text-emerald-400">กล้องพร้อมใช้งาน</span>
                                 </div>
                                 <div class="text-xs font-mono text-slate-400 bg-slate-900/80 px-3 py-1 rounded-full border border-slate-700">
-                                    เวลาเกณฑ์เข้างาน: <span class="text-cyan-400 font-bold">08:30 น.</span>
+                                    เกณฑ์เข้างาน: <span id="display-late-threshold" class="text-cyan-400 font-bold">08:30 น.</span>
                                 </div>
                             </div>
 
-                            <!-- FACE SCANNER CONTAINER -->
-                            <div id="face-scan-wrapper" class="relative w-full aspect-video bg-black rounded-xl overflow-hidden border-2 border-slate-700/60 flex items-center justify-center group shadow-inner">
-                                <video id="webcam" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
-                                <canvas id="canvas-overlay" class="absolute inset-0 w-full h-full pointer-events-none transform -scale-x-100"></canvas>
-
-                                <!-- HUD Face Frame Overlay -->
-                                <div id="hud-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center">
-                                    <!-- Dynamic Scanning Line -->
-                                    <div class="absolute w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#06b6d4] animate-scan-line"></div>
+                            <!-- SCANNER DISPLAY CONTAINER -->
+                            <div class="relative w-full aspect-video bg-black rounded-xl overflow-hidden border-2 border-slate-700/60 flex items-center justify-center group shadow-inner">
+                                
+                                <!-- 1. FACE SCAN CONTAINER -->
+                                <div id="face-scan-wrapper" class="w-full h-full relative">
+                                    <video id="webcam" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
                                     
-                                    <!-- Face Target Oval -->
-                                    <div class="w-60 h-72 sm:w-72 sm:h-80 border-2 border-dashed border-cyan-400/70 rounded-[50%] flex flex-col items-center justify-between p-4 hud-border relative transition-all duration-300">
-                                        <!-- Corners -->
-                                        <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-cyan-400"></div>
-                                        <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-cyan-400"></div>
-                                        <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-cyan-400"></div>
-                                        <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-cyan-400"></div>
+                                    <!-- Dynamic HUD Overlay -->
+                                    <div id="hud-overlay" class="absolute inset-0 pointer-events-none flex items-center justify-center">
+                                        <div class="absolute w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_15px_#06b6d4] animate-scan-line"></div>
+                                        
+                                        <!-- Face Oval Frame -->
+                                        <div class="w-56 h-64 sm:w-64 sm:h-72 border-2 border-dashed border-cyan-400/70 rounded-[50%] flex flex-col items-center justify-between p-4 hud-border relative transition-all duration-300">
+                                            <div class="absolute -top-1 -left-1 w-5 h-5 border-t-4 border-l-4 border-cyan-400"></div>
+                                            <div class="absolute -top-1 -right-1 w-5 h-5 border-t-4 border-r-4 border-cyan-400"></div>
+                                            <div class="absolute -bottom-1 -left-1 w-5 h-5 border-b-4 border-l-4 border-cyan-400"></div>
+                                            <div class="absolute -bottom-1 -right-1 w-5 h-5 border-b-4 border-r-4 border-cyan-400"></div>
 
-                                        <span class="bg-cyan-500/20 text-cyan-300 text-[11px] font-medium px-3 py-0.5 rounded-full backdrop-blur">
-                                            <i class="fa-solid fa-expand mr-1"></i> วางใบหน้าให้อยู่ในกรอบ
-                                        </span>
-                                        <div class="text-center text-cyan-400/80 text-xs font-mono tracking-widest animate-pulse">
-                                            [ FACE DETECTING ]
+                                            <span class="bg-cyan-500/20 text-cyan-300 text-[11px] font-medium px-3 py-0.5 rounded-full backdrop-blur">
+                                                <i class="fa-solid fa-expand mr-1"></i> วางใบหน้าให้อยู่ในกรอบ
+                                            </span>
+                                            <div class="text-center text-cyan-400/80 text-[11px] font-mono tracking-widest animate-pulse">
+                                                [ AI FACE RECOGNITION ]
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Camera Placeholder when Camera Offline -->
-                                <div id="camera-fallback" class="hidden absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 text-center">
-                                    <div class="w-16 h-16 rounded-full bg-slate-800 flex items-center justify-center text-slate-500 mb-3">
-                                        <i class="fa-solid fa-video-slash text-2xl"></i>
+                                <!-- 2. QR SCAN CONTAINER -->
+                                <div id="qr-scan-wrapper" class="hidden w-full h-full relative">
+                                    <div id="qr-reader" class="w-full h-full"></div>
+                                    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur px-4 py-1.5 rounded-full text-xs text-cyan-300 border border-slate-700 z-10">
+                                        <i class="fa-solid fa-qrcode mr-1"></i> ส่อง QR Code บัตรพนักงานที่กล้อง
                                     </div>
-                                    <p class="text-sm font-semibold text-slate-300">ไม่สามารถเชื่อมต่อกล้องได้</p>
-                                    <p class="text-xs text-slate-500 mt-1 max-w-xs">โปรดอนุญาตการใช้งานกล้องในบราวเซอร์ หรือเลือกใช้โหมดสแกน QR Code</p>
-                                    <button onclick="startCamera()" class="mt-4 px-4 py-2 bg-cyan-600 text-xs font-semibold rounded-lg hover:bg-cyan-500 transition">
-                                        <i class="fa-solid fa-rotate-right mr-1"></i> ลองใหม่อีกครั้ง
-                                    </button>
                                 </div>
+
+                                <!-- 3. MANUAL INPUT FALLBACK CONTAINER -->
+                                <div id="manual-scan-wrapper" class="hidden w-full h-full bg-slate-900 p-6 flex flex-col items-center justify-center space-y-4 text-center">
+                                    <div class="w-14 h-14 rounded-2xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-2xl border border-cyan-500/40">
+                                        <i class="fa-solid fa-keyboard"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-base font-bold text-white">โหมดป้อนรหัสพนักงานสำรอง</h3>
+                                        <p class="text-xs text-slate-400 mt-1">ใช้เมื่อกล้องขัดข้อง หรือต้องการทดสอบบันทึกเวลา</p>
+                                    </div>
+                                    <div class="flex items-center space-x-2 max-w-xs w-full">
+                                        <input type="text" id="manual-emp-input" placeholder="กรอกรหัสพนักงาน เช่น EMP-1001" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs font-mono text-white focus:outline-none focus:border-cyan-500">
+                                        <button onclick="submitManualAttendance()" class="px-4 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs rounded-xl shadow-lg transition">
+                                            บันทึก
+                                        </button>
+                                    </div>
+                                    <div class="pt-2">
+                                        <label class="text-[11px] text-cyan-400 hover:underline cursor-pointer flex items-center space-x-1">
+                                            <i class="fa-solid fa-file-arrow-up"></i>
+                                            <span>หรืออัปโหลดรูปภาพ QR Code เพื่อสแกน</span>
+                                            <input type="file" id="qr-file-input" accept="image/*" onchange="scanQRFromFile(event)" class="hidden">
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- CAMERA ERROR DIAGNOSTICS & TROUBLESHOOTING BOX -->
+                                <div id="camera-error-box" class="hidden absolute inset-0 bg-slate-950/95 p-6 flex flex-col items-center justify-center text-center space-y-3 z-20">
+                                    <div class="w-14 h-14 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center text-2xl">
+                                        <i class="fa-solid fa-video-slash"></i>
+                                    </div>
+                                    <div>
+                                        <h4 id="cam-error-title" class="text-sm font-bold text-rose-400">เปิดกล้องไม่สำเร็จ</h4>
+                                        <p id="cam-error-detail" class="text-xs text-slate-300 mt-1 max-w-sm">โปรดอนุญาตสิทธิ์การเข้าถึงกล้องในเบราว์เซอร์</p>
+                                    </div>
+
+                                    <!-- Guide checklist -->
+                                    <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 text-left text-[11px] text-slate-400 space-y-1 max-w-sm w-full">
+                                        <p class="font-semibold text-slate-200 mb-1"><i class="fa-solid fa-wrench mr-1 text-cyan-400"></i>วิธีแก้ไขเบื้องต้น:</p>
+                                        <p>1. กดไอคอน 🔒 แม่กุญแจ หน้า URL แล้วเปลี่ยน Camera เป็น <strong>Allow</strong></p>
+                                        <p>2. ตรวจสอบว่าไม่มีโปรแกรมอื่น (Zoom/Teams/OBS) เปิดใช้งานกล้องอยู่</p>
+                                        <p>3. หากใช้งานผ่าน HTTP ให้ลองเปลี่ยนเป็น <strong>HTTPS</strong></p>
+                                    </div>
+
+                                    <div class="flex items-center space-x-2 pt-2">
+                                        <button onclick="startCamera()" class="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold rounded-xl transition">
+                                            <i class="fa-solid fa-rotate-right mr-1"></i> ลองเปิดกล้องอีกครั้ง
+                                        </button>
+                                        <button onclick="setScannerType('manual')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl border border-slate-700 transition">
+                                            สลับไปใช้โหมดป้อนรหัส
+                                        </button>
+                                    </div>
+                                </div>
+
                             </div>
 
-                            <!-- QR SCANNER CONTAINER -->
-                            <div id="qr-scan-wrapper" class="hidden relative w-full aspect-video bg-black rounded-xl overflow-hidden border-2 border-slate-700/60 flex items-center justify-center">
-                                <div id="qr-reader" class="w-full h-full"></div>
-                                <div class="absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur px-4 py-1.5 rounded-full text-xs text-cyan-300 border border-slate-700 z-10">
-                                    <i class="fa-solid fa-qrcode mr-1"></i> ส่อง QR Code บัตรพนักงานที่กล้อง
-                                </div>
-                            </div>
-
-                            <!-- Face Scan Interactive Trigger Buttons -->
+                            <!-- Face Scan Simulation Buttons -->
                             <div id="face-actions-bar" class="mt-4 flex flex-wrap items-center justify-between gap-3">
-                                <div class="text-xs text-slate-400">
-                                    <i class="fa-solid fa-circle-info text-cyan-400 mr-1"></i>
-                                    ระบบจะเปรียบเทียบใบหน้ากับพนักงานที่ลงทะเบียนโดยอัตโนมัติ
+                                <div class="text-xs text-slate-400 flex items-center">
+                                    <i class="fa-solid fa-circle-info text-cyan-400 mr-1.5"></i>
+                                    <span>เลือกพนักงานทดสอบ หรือกดจับภาพสแกนเพื่อลงเวลา</span>
                                 </div>
                                 <div class="flex items-center space-x-2 w-full sm:w-auto">
-                                    <!-- Simulation / Select Employee Trigger for testing -->
-                                    <select id="quick-employee-select" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-3 py-2.5 focus:outline-none focus:border-cyan-500">
-                                        <option value="">-- เลือกทดสอบพนักงาน --</option>
+                                    <select id="quick-employee-select" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-cyan-500">
+                                        <option value="">-- เลือกสแกนพนักงาน --</option>
                                     </select>
                                     <button onclick="triggerFaceScan()" class="flex-1 sm:flex-none px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-cyan-500/20 transition transform active:scale-95 flex items-center justify-center space-x-2">
                                         <i class="fa-solid fa-bolt"></i>
-                                        <span>จับภาพสแกนหน้า</span>
+                                        <span>จับภาพสแกนลงเวลา</span>
                                     </button>
                                 </div>
                             </div>
@@ -251,22 +330,22 @@
                         </div>
                     </div>
 
-                    <!-- Recent Activity Sidebar (4 Cols) -->
+                    <!-- Recent Activity Stream (4 Cols) -->
                     <div class="lg:col-span-5 xl:col-span-4 flex flex-col">
                         <div class="bg-slate-800/80 rounded-2xl p-4 sm:p-5 border border-slate-700/80 shadow-xl flex-1 flex flex-col h-full">
                             <div class="flex items-center justify-between pb-3 border-b border-slate-700/60 mb-4">
                                 <div class="flex items-center space-x-2">
                                     <i class="fa-solid fa-clock-rotate-left text-cyan-400"></i>
-                                    <h3 class="font-semibold text-sm text-white">บันทึกล่าสุดวันนี้</h3>
+                                    <h3 class="font-semibold text-sm text-white">รายการบันทึกล่าสุด</h3>
                                 </div>
                                 <span id="today-count-badge" class="bg-cyan-950 text-cyan-400 border border-cyan-800 text-[11px] px-2.5 py-0.5 rounded-full font-bold">
-                                    0 คน
+                                    0 รายการ
                                 </span>
                             </div>
 
-                            <!-- Activity Feed Scrollable Area -->
+                            <!-- Stream Items -->
                             <div id="recent-feed-list" class="flex-1 space-y-3 overflow-y-auto max-h-[460px] pr-1">
-                                <!-- Dynamic Recent Scans -->
+                                <!-- Dynamic List -->
                             </div>
                         </div>
                     </div>
@@ -281,12 +360,12 @@
                     <!-- Registration Form (7 Cols) -->
                     <div class="lg:col-span-7 bg-slate-800/80 rounded-2xl p-6 border border-slate-700/80 shadow-xl">
                         <div class="flex items-center space-x-3 pb-4 mb-6 border-b border-slate-700">
-                            <div class="w-9 h-9 rounded-lg bg-cyan-500/20 flex items-center justify-center text-cyan-400">
+                            <div class="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400">
                                 <i class="fa-solid fa-user-plus text-lg"></i>
                             </div>
                             <div>
                                 <h2 class="text-base font-bold text-white">ลงทะเบียนพนักงานใหม่</h2>
-                                <p class="text-xs text-slate-400">กรอกข้อมูลและถ่ายภาพใบหน้าเพื่อบันทึกในระบบ</p>
+                                <p class="text-xs text-slate-400">กรอกข้อมูล ถ่ายภาพใบหน้า และออกบัตรประจำตัวพนักงานพร้อม QR Code</p>
                             </div>
                         </div>
 
@@ -294,18 +373,18 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-medium text-slate-300 mb-1">รหัสพนักงาน <span class="text-rose-400">*</span></label>
-                                    <input type="text" id="reg-emp-id" required placeholder="เช่น EMP-1005" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition">
+                                    <input type="text" id="reg-emp-id" required placeholder="เช่น EMP-1005" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 transition">
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-slate-300 mb-1">ชื่อ-นามสกุล <span class="text-rose-400">*</span></label>
-                                    <input type="text" id="reg-name" required placeholder="สมชาย ใจดี" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition">
+                                    <input type="text" id="reg-name" required placeholder="สมชาย ใจดี" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 transition">
                                 </div>
                             </div>
 
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-xs font-medium text-slate-300 mb-1">แผนก / ฝ่าย <span class="text-rose-400">*</span></label>
-                                    <select id="reg-department" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition">
+                                    <select id="reg-department" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 transition">
                                         <option value="">-- เลือกแผนก --</option>
                                         <option value="เทคโนโลยีสารสนเทศ (IT)">เทคโนโลยีสารสนเทศ (IT)</option>
                                         <option value="ทรัพยากรบุคคล (HR)">ทรัพยากรบุคคล (HR)</option>
@@ -316,48 +395,48 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-medium text-slate-300 mb-1">ตำแหน่งงาน</label>
-                                    <input type="text" id="reg-position" placeholder="นักพัฒนาซอฟต์แวร์" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 transition">
+                                    <input type="text" id="reg-position" placeholder="นักพัฒนาซอฟต์แวร์" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500 transition">
                                 </div>
                             </div>
 
                             <!-- Camera Face Snapshot Box -->
                             <div class="pt-2">
-                                <label class="block text-xs font-medium text-slate-300 mb-2">บันทึกรูปภาพใบหน้าพนักงาน <span class="text-rose-400">*</span></label>
+                                <label class="block text-xs font-medium text-slate-300 mb-2">ถ่ายภาพใบหน้าพนักงาน <span class="text-rose-400">*</span></label>
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                                     <div class="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-slate-700">
                                         <video id="reg-webcam" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
                                     </div>
                                     <div class="flex flex-col items-center justify-center p-4 border border-dashed border-slate-700 rounded-xl bg-slate-900/50 space-y-3">
-                                        <div id="snapshot-preview-container" class="w-24 h-24 rounded-full overflow-hidden bg-slate-800 border-2 border-cyan-500 flex items-center justify-center">
-                                            <i class="fa-solid fa-user text-3xl text-slate-600" id="snapshot-placeholder"></i>
+                                        <div id="snapshot-preview-container" class="w-20 h-20 rounded-full overflow-hidden bg-slate-800 border-2 border-cyan-500 flex items-center justify-center">
+                                            <i class="fa-solid fa-user text-2xl text-slate-600" id="snapshot-placeholder"></i>
                                             <img id="reg-photo-img" class="w-full h-full object-cover hidden">
                                         </div>
                                         <button type="button" onclick="captureRegistrationSnapshot()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-cyan-300 text-xs font-semibold rounded-lg transition flex items-center space-x-1.5">
                                             <i class="fa-solid fa-camera"></i>
-                                            <span>ถ่ายภาพใบหน้า</span>
+                                            <span>ถ่ายภาพบันทึกใบหน้า</span>
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
                             <div class="pt-4 flex justify-end">
-                                <button type="submit" class="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-cyan-600/30 transition flex items-center space-x-2">
+                                <button type="submit" class="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs sm:text-sm rounded-xl shadow-lg shadow-cyan-600/30 transition flex items-center space-x-2">
                                     <i class="fa-solid fa-save"></i>
-                                    <span>ลงทะเบียนและสร้าง QR Code</span>
+                                    <span>ลงทะเบียน & ออกบัตรประจำตัว</span>
                                 </button>
                             </div>
                         </form>
                     </div>
 
-                    <!-- Generated ID Card Preview (5 Cols) -->
+                    <!-- Generated Badge Card Preview (5 Cols) -->
                     <div class="lg:col-span-5 flex flex-col">
                         <div class="bg-slate-800/80 rounded-2xl p-6 border border-slate-700/80 shadow-xl flex-1 flex flex-col justify-between">
                             <div>
                                 <h3 class="text-sm font-bold text-white mb-4 flex items-center">
-                                    <i class="fa-solid fa-id-card text-cyan-400 mr-2"></i> ตัวอย่างบัตรพนักงาน & QR Code
+                                    <i class="fa-solid fa-id-card text-cyan-400 mr-2"></i> ตัวอย่างบัตรพนักงาน (Employee Badge)
                                 </h3>
 
-                                <!-- Badge Visual Container -->
+                                <!-- Badge Container -->
                                 <div id="employee-badge-card" class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 rounded-2xl border-2 border-cyan-500/40 shadow-2xl relative overflow-hidden text-center space-y-4">
                                     <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-cyan-500 to-blue-600"></div>
                                     
@@ -375,14 +454,14 @@
                                     <div class="bg-white p-3 rounded-xl inline-block shadow-lg mx-auto">
                                         <div id="badge-qrcode"></div>
                                     </div>
-                                    <p class="text-[11px] text-slate-400">ใช้ QR Code นี้ในการสแกนลงเวลาเข้า-ออกงาน</p>
+                                    <p class="text-[11px] text-slate-400">ใช้สแกนผ่านกล้องลงเวลาปฏิบัติงาน</p>
                                 </div>
                             </div>
 
-                            <div class="mt-6 flex space-x-3">
-                                <button onclick="printBadgeCard()" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-2">
+                            <div class="mt-6">
+                                <button onclick="printBadgeCard()" class="w-full py-2.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-2">
                                     <i class="fa-solid fa-print"></i>
-                                    <span>พิมพ์บัตรพนักงาน</span>
+                                    <span>พิมพ์บัตรพนักงาน (Print Badge)</span>
                                 </button>
                             </div>
                         </div>
@@ -394,47 +473,56 @@
             <!-- PAGE 3: ATTENDANCE HISTORY & DASHBOARD -->
             <section id="page-history" class="page-content hidden space-y-6">
                 
-                <!-- Dashboard Stats Cards -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 flex items-center space-x-4">
-                        <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-xl">
+                <!-- Stats Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-lg">
                             <i class="fa-solid fa-users"></i>
                         </div>
                         <div>
-                            <p class="text-xs font-medium text-slate-400">ลงเวลาเข้างานวันนี้</p>
-                            <h3 id="stat-total-today" class="text-2xl font-bold text-white">0</h3>
+                            <p class="text-[11px] font-medium text-slate-400">เข้างานวันนี้</p>
+                            <h3 id="stat-total-today" class="text-xl font-bold text-white">0</h3>
                         </div>
                     </div>
-                    <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 flex items-center space-x-4">
-                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xl">
+                    <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg">
                             <i class="fa-solid fa-circle-check"></i>
                         </div>
                         <div>
-                            <p class="text-xs font-medium text-slate-400">มาตรงเวลา</p>
-                            <h3 id="stat-ontime-today" class="text-2xl font-bold text-emerald-400">0</h3>
+                            <p class="text-[11px] font-medium text-slate-400">ตรงเวลา</p>
+                            <h3 id="stat-ontime-today" class="text-xl font-bold text-emerald-400">0</h3>
                         </div>
                     </div>
-                    <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 flex items-center space-x-4">
-                        <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-xl">
-                            <i class="fa-solid fa-clock font-normal"></i>
+                    <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-clock"></i>
                         </div>
                         <div>
-                            <p class="text-xs font-medium text-slate-400">มาสาย</p>
-                            <h3 id="stat-late-today" class="text-2xl font-bold text-amber-400">0</h3>
+                            <p class="text-[11px] font-medium text-slate-400">สาย</p>
+                            <h3 id="stat-late-today" class="text-xl font-bold text-amber-400">0</h3>
                         </div>
                     </div>
-                    <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 flex items-center space-x-4">
-                        <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-xl">
+                    <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-lg">
                             <i class="fa-solid fa-door-open"></i>
                         </div>
                         <div>
-                            <p class="text-xs font-medium text-slate-400">ออกงานแล้ว</p>
-                            <h3 id="stat-checkout-today" class="text-2xl font-bold text-purple-400">0</h3>
+                            <p class="text-[11px] font-medium text-slate-400">ออกงาน</p>
+                            <h3 id="stat-checkout-today" class="text-xl font-bold text-purple-400">0</h3>
+                        </div>
+                    </div>
+                    <div class="bg-slate-800/90 rounded-2xl p-4 border border-slate-700 flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <div>
+                            <p class="text-[11px] font-medium text-slate-400">รอ Sync Sheets</p>
+                            <h3 id="stat-pending-sync" class="text-xl font-bold text-blue-400">0</h3>
                         </div>
                     </div>
                 </div>
 
-                <!-- Filters & Action Bar -->
+                <!-- Filters & Sync Action Bar -->
                 <div class="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/80 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
                     <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
                         <!-- Search Box -->
@@ -451,17 +539,24 @@
                             <option value="">ทุกสถานะ</option>
                             <option value="ตรงเวลา">ตรงเวลา</option>
                             <option value="สาย">สาย</option>
+                            <option value="ออกงาน">ออกงาน</option>
                         </select>
                     </div>
 
-                    <!-- Export CSV Button -->
-                    <button onclick="exportToCSV()" class="w-full md:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-2 shadow-lg shadow-emerald-600/20">
-                        <i class="fa-solid fa-file-csv text-base"></i>
-                        <span>ส่งออกไฟล์ CSV</span>
-                    </button>
+                    <!-- Sync & Export Action Buttons -->
+                    <div class="flex items-center space-x-2 w-full md:w-auto">
+                        <button onclick="syncPendingLogs()" class="flex-1 md:flex-none px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-1.5 shadow-lg shadow-blue-600/20">
+                            <i class="fa-solid fa-rotate"></i>
+                            <span>ส่งข้อมูลย้อนหลังเข้า Sheets</span>
+                        </button>
+                        <button onclick="exportToCSV()" class="flex-1 md:flex-none px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl transition flex items-center justify-center space-x-1.5 shadow-lg shadow-emerald-600/20">
+                            <i class="fa-solid fa-file-csv"></i>
+                            <span>ส่งออก CSV</span>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- History Table Container -->
+                <!-- History Data Table -->
                 <div class="bg-slate-800/80 rounded-2xl border border-slate-700/80 shadow-xl overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left text-xs">
@@ -473,11 +568,12 @@
                                     <th class="px-4 py-3.5">วันที่ & เวลา</th>
                                     <th class="px-4 py-3.5 text-center">ประเภท</th>
                                     <th class="px-4 py-3.5 text-center">วิธีสแกน</th>
-                                    <th class="px-4 py-3.5 text-center">สถานะ</th>
+                                    <th class="px-4 py-3.5 text-center">สถานะเวลา</th>
+                                    <th class="px-4 py-3.5 text-center">Google Sheets Sync</th>
                                 </tr>
                             </thead>
                             <tbody id="history-table-body" class="divide-y divide-slate-700/60 text-slate-300">
-                                <!-- Dynamic History Rows -->
+                                <!-- Dynamic Rows -->
                             </tbody>
                         </table>
                     </div>
@@ -489,8 +585,8 @@
             <section id="page-directory" class="page-content hidden space-y-6">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-lg font-bold text-white">รายชื่อพนักงานในระบบ</h2>
-                        <p class="text-xs text-slate-400">พนักงานทั้งหมดที่ถูกบันทึกพร้อม QR Code</p>
+                        <h2 class="text-lg font-bold text-white">รายชื่อพนักงานทั้งหมด</h2>
+                        <p class="text-xs text-slate-400">พนักงานที่ลงทะเบียนในระบบพร้อม QR Code ประจำตัว</p>
                     </div>
                     <button onclick="switchTab('register')" class="px-4 py-2 bg-cyan-600 text-xs font-semibold rounded-xl text-white hover:bg-cyan-500 transition">
                         <i class="fa-solid fa-plus mr-1"></i> เพิ่มพนักงาน
@@ -505,12 +601,93 @@
         </div>
     </main>
 
-    <!-- SUCCESS SCAN MODAL POPUP -->
+    <!-- GOOGLE SHEETS & SYSTEM SETTINGS MODAL -->
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-6">
+            
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-sliders"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-white">ตั้งค่าระบบ & Google Sheets Connection</h3>
+                        <p class="text-xs text-slate-400">เชื่อมต่อ Web App URL และตั้งค่าเกณฑ์เวลาเข้างาน</p>
+                    </div>
+                </div>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Apps Script URL Configuration -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">
+                        Google Apps Script Web App URL:
+                    </label>
+                    <input type="url" id="setting-sheets-url" placeholder="https://script.google.com/macros/s/AKfycb.../exec" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-cyan-300 font-mono focus:outline-none focus:border-cyan-500">
+                    <p class="text-[11px] text-slate-400 mt-1">คัดลอก URL จากการปรับใช้งาน (Deployment) ประเภท Web App ใน Google Apps Script</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">เวลาเกณฑ์เข้างาน (สายหลังจากเวลา):</label>
+                        <input type="time" id="setting-late-time" value="08:30" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-cyan-500">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="testSheetsConnection()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-cyan-400 text-xs font-semibold border border-slate-700 rounded-xl transition flex items-center justify-center space-x-1.5">
+                            <i class="fa-solid fa-plug"></i>
+                            <span>ทดสอบการเชื่อมต่อ (Test)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Setup Guide Box -->
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 text-xs space-y-2">
+                    <div class="flex items-center justify-between text-cyan-400 font-semibold">
+                        <span><i class="fa-solid fa-code mr-1"></i> โค้ด Google Apps Script (doPost):</span>
+                        <button onclick="copyAppsScriptCode()" class="text-[11px] bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded text-slate-300">คัดลอกโค้ด</button>
+                    </div>
+                    <pre id="apps-script-code-text" class="text-[10px] bg-slate-900 p-2.5 rounded-lg text-slate-300 font-mono overflow-x-auto max-h-36">function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    sheet.appendRow([
+      data.id || Date.now(),
+      data.dateStr,
+      data.timeStr,
+      data.empId,
+      data.empName,
+      data.department,
+      data.type,
+      data.status,
+      data.method
+    ]);
+    return ContentService.createTextOutput(JSON.stringify({status: "success"}))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: err.toString()}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}</pre>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+                <button onclick="saveSettings()" class="px-6 py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs rounded-xl shadow-lg transition">
+                    บันทึกการตั้งค่า
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SUCCESS SCAN POPUP MODAL -->
     <div id="scan-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border-2 border-cyan-500/60 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-5 transform transition-all scale-95" id="scan-modal-card">
             
             <!-- Success Icon -->
-            <div id="modal-icon-container" class="w-20 h-20 bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500 rounded-full mx-auto flex items-center justify-center text-4xl animate-bounce">
+            <div id="modal-icon-container" class="w-16 h-16 bg-emerald-500/20 text-emerald-400 border-2 border-emerald-500 rounded-full mx-auto flex items-center justify-center text-3xl animate-bounce">
                 <i class="fa-solid fa-check"></i>
             </div>
 
@@ -518,22 +695,23 @@
                 <span id="modal-type-badge" class="px-3 py-1 rounded-full text-xs font-bold uppercase bg-emerald-950 text-emerald-400 border border-emerald-800">
                     บันทึกเข้างานสำเร็จ
                 </span>
-                <h3 id="modal-emp-name" class="text-xl font-bold text-white mt-3">ชื่อ-นามสกุล</h3>
+                <h3 id="modal-emp-name" class="text-lg font-bold text-white mt-3">ชื่อ-นามสกุล</h3>
                 <p id="modal-emp-dept" class="text-xs text-cyan-400">แผนกงาน</p>
                 <p id="modal-emp-id" class="text-xs font-mono text-slate-400">ID: EMP-0000</p>
             </div>
 
-            <!-- Captured Image & Time details -->
+            <!-- Details Box -->
             <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700/80 flex items-center space-x-4">
                 <img id="modal-emp-photo" src="" class="w-16 h-16 rounded-xl object-cover border border-cyan-500/40">
                 <div class="text-left space-y-1">
                     <p class="text-xs text-slate-400">เวลาที่บันทึก: <span id="modal-timestamp" class="text-white font-bold font-mono">08:25:10</span></p>
                     <p class="text-xs text-slate-400">สถานะ: <span id="modal-status-text" class="font-bold text-emerald-400">ตรงเวลา</span></p>
                     <p class="text-xs text-slate-400">ผ่านวิธี: <span id="modal-method-text" class="text-cyan-400">สแกนใบหน้า</span></p>
+                    <p class="text-[11px] text-slate-400">Google Sheets: <span id="modal-sync-text" class="text-emerald-400">Sync เรียบร้อย</span></p>
                 </div>
             </div>
 
-            <button onclick="closeScanModal()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-sm rounded-xl transition">
+            <button onclick="closeScanModal()" class="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs sm:text-sm rounded-xl transition">
                 ตกลง / ปิดหน้าต่าง
             </button>
         </div>
@@ -541,51 +719,63 @@
 
     <!-- AUDIO SOUND SYSTEM (Web Audio API Synthesizer) -->
     <script>
-        // Web Audio API Sound Generator for clean, zero-dependency audio feedback
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         let audioCtx = null;
         let isAudioMuted = false;
 
         function getAudioContext() {
-            if (!audioCtx) {
-                audioCtx = new AudioContext();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
             return audioCtx;
         }
 
+        // Play pleasant chime for standard successful scan
         function playSuccessSound() {
             if (isAudioMuted) return;
             try {
                 const ctx = getAudioContext();
                 const now = ctx.currentTime;
-
-                const osc1 = ctx.createOscillator();
-                const osc2 = ctx.createOscillator();
+                const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
 
-                osc1.type = 'sine';
-                osc2.type = 'sine';
-
-                // High pleasant chime (800Hz -> 1200Hz)
-                osc1.frequency.setValueAtTime(800, now);
-                osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.15);
 
                 gain.gain.setValueAtTime(0.3, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
 
-                osc1.connect(gain);
+                osc.connect(gain);
                 gain.connect(ctx.destination);
-
-                osc1.start(now);
-                osc1.stop(now + 0.3);
-            } catch (e) {
-                console.log("Audio play error", e);
-            }
+                osc.start(now);
+                osc.stop(now + 0.3);
+            } catch (e) {}
         }
 
+        // Play dual warning tone for late attendance
+        function playLateSound() {
+            if (isAudioMuted) return;
+            try {
+                const ctx = getAudioContext();
+                const now = ctx.currentTime;
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(350, now + 0.15);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.4);
+            } catch (e) {}
+        }
+
+        // Play buzzer for error
         function playErrorSound() {
             if (isAudioMuted) return;
             try {
@@ -603,12 +793,9 @@
 
                 osc.connect(gain);
                 gain.connect(ctx.destination);
-
                 osc.start(now);
                 osc.stop(now + 0.25);
-            } catch (e) {
-                console.log("Audio play error", e);
-            }
+            } catch (e) {}
         }
 
         function toggleAudio() {
@@ -623,13 +810,15 @@
         }
     </script>
 
-    <!-- CORE SYSTEM APP SCRIPT -->
+    <!-- MAIN SYSTEM CONTROLLER SCRIPT -->
     <script>
-        // Data Models in localStorage
+        // Storage Keys
         const STORAGE_EMPLOYEES_KEY = 'timesync_employees_db';
         const STORAGE_ATTENDANCE_KEY = 'timesync_attendance_db';
+        const STORAGE_SHEETS_URL_KEY = 'timesync_sheets_url';
+        const STORAGE_LATE_TIME_KEY = 'timesync_late_time';
 
-        // Initial Seed Employees
+        // Seed Default Employees
         const seedEmployees = [
             {
                 id: 'EMP-1001',
@@ -654,29 +843,43 @@
             }
         ];
 
-        // State Variables
+        // System State
         let employees = [];
         let attendanceLogs = [];
+        let googleSheetsUrl = '';
+        let lateThresholdTime = '08:30';
         let currentScanMode = 'IN'; // 'IN' or 'OUT'
-        let currentScannerType = 'face'; // 'face' or 'qr'
+        let currentScannerType = 'face'; // 'face', 'qr', 'manual'
         let webcamStream = null;
         let regWebcamStream = null;
         let html5QrCodeScanner = null;
         let capturedRegistrationPhoto = null;
-        let autoScanInterval = null;
 
-        // Initialize App on DOM Loaded
+        // On DOM Loaded Initialization
         document.addEventListener('DOMContentLoaded', () => {
+            initSystemSettings();
             initStorage();
             startLiveClock();
+            checkHTTPSContext();
             switchTab('kiosk');
             populateEmployeeSelect();
             renderHistoryTable();
             renderDirectory();
             updateDashboardStats();
+            updateSheetsStatusBadge();
         });
 
-        // Storage Initialization
+        // Initialize Settings
+        function initSystemSettings() {
+            googleSheetsUrl = localStorage.getItem(STORAGE_SHEETS_URL_KEY) || '';
+            lateThresholdTime = localStorage.getItem(STORAGE_LATE_TIME_KEY) || '08:30';
+            
+            document.getElementById('setting-sheets-url').value = googleSheetsUrl;
+            document.getElementById('setting-late-time').value = lateThresholdTime;
+            document.getElementById('display-late-threshold').textContent = `${lateThresholdTime} น.`;
+        }
+
+        // Initialize Local Storage
         function initStorage() {
             const storedEmp = localStorage.getItem(STORAGE_EMPLOYEES_KEY);
             if (!storedEmp) {
@@ -690,7 +893,7 @@
             if (!storedLogs) {
                 attendanceLogs = [
                     {
-                        id: 'LOG-1',
+                        id: 'LOG-101',
                         empId: 'EMP-1001',
                         empName: 'กิตติศักดิ์ วงศ์สว่าง',
                         department: 'เทคโนโลยีสารสนเทศ (IT)',
@@ -700,7 +903,8 @@
                         type: 'IN',
                         method: 'ใบหน้า',
                         status: 'ตรงเวลา',
-                        photo: seedEmployees[0].photo
+                        photo: seedEmployees[0].photo,
+                        synced: false
                     }
                 ];
                 localStorage.setItem(STORAGE_ATTENDANCE_KEY, JSON.stringify(attendanceLogs));
@@ -711,7 +915,16 @@
             renderRecentFeed();
         }
 
-        // Clock Function
+        // HTTPS Security Check
+        function checkHTTPSContext() {
+            const isSecure = window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const banner = document.getElementById('https-warning-banner');
+            if (!isSecure && location.protocol !== 'https:') {
+                banner.classList.remove('hidden');
+            }
+        }
+
+        // Live Clock
         function startLiveClock() {
             function updateClock() {
                 const now = new Date();
@@ -733,14 +946,12 @@
 
         // Navigation Tabs Controller
         function switchTab(tabId) {
-            // Hide all pages
             document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-tab').forEach(el => {
                 el.classList.remove('bg-cyan-600', 'text-white');
                 el.classList.add('text-slate-300');
             });
 
-            // Show selected page
             const targetPage = document.getElementById(`page-${tabId}`);
             const targetTab = document.getElementById(`tab-${tabId}`);
             if (targetPage) targetPage.classList.remove('hidden');
@@ -749,10 +960,9 @@
                 targetTab.classList.remove('text-slate-300');
             }
 
-            // Camera handling based on active page
             if (tabId === 'kiosk') {
                 if (currentScannerType === 'face') startCamera();
-                else startQRScanner();
+                else if (currentScannerType === 'qr') startQRScanner();
             } else {
                 stopCamera();
                 stopQRScanner();
@@ -765,54 +975,77 @@
             }
         }
 
-        // Mode Switching: Check-In vs Check-Out
+        // Check-In / Check-Out Mode Switcher
         function setScanMode(mode) {
             currentScanMode = mode;
             const btnIn = document.getElementById('btn-mode-in');
             const btnOut = document.getElementById('btn-mode-out');
 
             if (mode === 'IN') {
-                btnIn.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center justify-center space-x-2 bg-emerald-600 text-white shadow-lg shadow-emerald-600/30";
-                btnOut.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white";
+                btnIn.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-2 bg-emerald-600 text-white shadow-lg shadow-emerald-600/30";
+                btnOut.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white";
             } else {
-                btnOut.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center justify-center space-x-2 bg-purple-600 text-white shadow-lg shadow-purple-600/30";
-                btnIn.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white";
+                btnOut.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-2 bg-purple-600 text-white shadow-lg shadow-purple-600/30";
+                btnIn.className = "flex-1 sm:flex-none px-6 py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition flex items-center justify-center space-x-2 text-slate-400 hover:text-white";
             }
         }
 
-        // Scanner Type Toggle: Face vs QR
+        // Scanner Type Switcher (Face / QR / Manual)
         function setScannerType(type) {
             currentScannerType = type;
             const btnFace = document.getElementById('btn-type-face');
             const btnQR = document.getElementById('btn-type-qr');
+            const btnManual = document.getElementById('btn-type-manual');
+            
             const faceWrapper = document.getElementById('face-scan-wrapper');
             const qrWrapper = document.getElementById('qr-scan-wrapper');
+            const manualWrapper = document.getElementById('manual-scan-wrapper');
             const faceActions = document.getElementById('face-actions-bar');
+            const errorBox = document.getElementById('camera-error-box');
+
+            errorBox.classList.add('hidden');
+
+            // Reset Tab UI
+            [btnFace, btnQR, btnManual].forEach(b => {
+                b.className = "px-3 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition flex items-center space-x-1";
+            });
 
             if (type === 'face') {
-                btnFace.className = "px-3 py-1.5 rounded-md text-xs font-semibold bg-cyan-600 text-white transition flex items-center space-x-1.5";
-                btnQR.className = "px-3 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-white transition flex items-center space-x-1.5";
+                btnFace.className = "px-3 py-2 rounded-lg text-xs font-semibold bg-cyan-600 text-white transition flex items-center space-x-1";
                 faceWrapper.classList.remove('hidden');
                 qrWrapper.classList.add('hidden');
+                manualWrapper.classList.add('hidden');
                 faceActions.classList.remove('hidden');
                 stopQRScanner();
                 startCamera();
-            } else {
-                btnQR.className = "px-3 py-1.5 rounded-md text-xs font-semibold bg-cyan-600 text-white transition flex items-center space-x-1.5";
-                btnFace.className = "px-3 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-white transition flex items-center space-x-1.5";
+            } else if (type === 'qr') {
+                btnQR.className = "px-3 py-2 rounded-lg text-xs font-semibold bg-cyan-600 text-white transition flex items-center space-x-1";
                 qrWrapper.classList.remove('hidden');
                 faceWrapper.classList.add('hidden');
+                manualWrapper.classList.add('hidden');
                 faceActions.classList.add('hidden');
                 stopCamera();
                 startQRScanner();
+            } else {
+                btnManual.className = "px-3 py-2 rounded-lg text-xs font-semibold bg-cyan-600 text-white transition flex items-center space-x-1";
+                manualWrapper.classList.remove('hidden');
+                faceWrapper.classList.add('hidden');
+                qrWrapper.classList.add('hidden');
+                faceActions.classList.add('hidden');
+                stopCamera();
+                stopQRScanner();
             }
         }
 
-        // Kiosk Webcam Stream Initialization
+        // Webcam Controller with Error Diagnostics
         async function startCamera() {
             const video = document.getElementById('webcam');
-            const fallback = document.getElementById('camera-fallback');
+            const errorBox = document.getElementById('camera-error-box');
             const statusEl = document.getElementById('camera-status');
+            const dot = document.getElementById('camera-dot');
+            const ping = document.getElementById('camera-ping');
+
+            errorBox.classList.add('hidden');
 
             try {
                 if (webcamStream) {
@@ -825,18 +1058,40 @@
                 });
                 
                 video.srcObject = webcamStream;
-                fallback.classList.add('hidden');
-                if (statusEl) {
-                    statusEl.textContent = 'กล้องพร้อมใช้งาน';
-                    statusEl.className = 'text-xs font-medium text-emerald-400';
-                }
+                statusEl.textContent = 'กล้องพร้อมใช้งาน';
+                statusEl.className = 'text-xs font-medium text-emerald-400';
+                dot.className = 'relative inline-flex rounded-full h-3 w-3 bg-emerald-500';
+                ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
             } catch (err) {
-                console.error("Camera access failed:", err);
-                fallback.classList.remove('hidden');
-                if (statusEl) {
-                    statusEl.textContent = 'ไม่พบกล้อง';
-                    statusEl.className = 'text-xs font-medium text-rose-400';
-                }
+                console.error("Camera Access Error:", err);
+                statusEl.textContent = 'กล้องขัดข้อง';
+                statusEl.className = 'text-xs font-medium text-rose-400';
+                dot.className = 'relative inline-flex rounded-full h-3 w-3 bg-rose-500';
+                ping.className = 'hidden';
+
+                showCameraError(err);
+            }
+        }
+
+        function showCameraError(err) {
+            const errorBox = document.getElementById('camera-error-box');
+            const titleEl = document.getElementById('cam-error-title');
+            const detailEl = document.getElementById('cam-error-detail');
+
+            errorBox.classList.remove('hidden');
+
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                titleEl.textContent = "ถูกปฏิเสธสิทธิ์การใช้งานกล้อง (Permission Denied)";
+                detailEl.textContent = "คุณได้กดบล็อกการใช้งานกล้องไว้ โปรดคลิกไอคอนแม่กุญแจหน้า URL แล้วเปลี่ยนสิทธิ์เป็น อนุญาต (Allow)";
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                titleEl.textContent = "กล้องถูกโปรแกรมอื่นใช้งานอยู่ (Camera Busy)";
+                detailEl.textContent = "กล้องกำลังถูกเปิดโดยโปรแกรมอื่น เช่น Zoom, Microsoft Teams หรือ OBS โปรดปิดโปรแกรมดังกล่าวก่อน";
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                titleEl.textContent = "ไม่พบอุปกรณ์กล้อง (No Camera Found)";
+                detailEl.textContent = "ระบบไม่พบกล้องบนอุปกรณ์ของคุณ โปรดเสียบกล้อง หรือสลับใช้โหมดป้อนรหัสพนักงานสำรอง";
+            } else {
+                titleEl.textContent = "ไม่สามารถเชื่อมต่อกล้องได้";
+                detailEl.textContent = err.message || "เกิดข้อผิดพลาดในการเปิดกล้อง โปรดใช้วิธีป้อนรหัสสำรอง";
             }
         }
 
@@ -857,7 +1112,7 @@
                 regWebcamStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
                 if (video) video.srcObject = regWebcamStream;
             } catch (err) {
-                console.warn("Reg camera error:", err);
+                console.warn("Registration camera warning:", err);
             }
         }
 
@@ -868,14 +1123,14 @@
             }
         }
 
-        // Take snapshot for Employee Registration
+        // Capture Snapshot for Registration
         function captureRegistrationSnapshot() {
             const video = document.getElementById('reg-webcam');
             const photoImg = document.getElementById('reg-photo-img');
             const placeholder = document.getElementById('snapshot-placeholder');
 
             if (!video || !video.videoWidth) {
-                alertModal("กรุณาเปิดกล้องสำหรับการบันทึกภาพ");
+                alertModal("กรุณาเปิดกล้องสำหรับการบันทึกภาพก่อน");
                 return;
             }
 
@@ -884,7 +1139,6 @@
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             
-            // Mirror flip canvas to match user preview
             ctx.translate(canvas.width, 0);
             ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -894,28 +1148,24 @@
             photoImg.classList.remove('hidden');
             if (placeholder) placeholder.classList.add('hidden');
 
-            // Update badge preview photo
             document.getElementById('badge-photo').src = capturedRegistrationPhoto;
         }
 
         // QR Code Reader Integration via html5-qrcode
         function startQRScanner() {
-            if (html5QrCodeScanner) {
-                stopQRScanner();
-            }
+            if (html5QrCodeScanner) stopQRScanner();
 
             html5QrCodeScanner = new Html5Qrcode("qr-reader");
-            const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+            const config = { fps: 10, qrbox: { width: 240, height: 240 } };
 
             html5QrCodeScanner.start(
                 { facingMode: "user" },
                 config,
                 onQRCodeScanned,
-                (errorMessage) => {
-                    // Scanning...
-                }
+                (err) => {}
             ).catch(err => {
-                console.error("Unable to start QR scanner", err);
+                console.error("QR scanner start failed", err);
+                showCameraError(err);
             });
         }
 
@@ -924,15 +1174,12 @@
                 html5QrCodeScanner.stop().then(() => {
                     html5QrCodeScanner.clear();
                     html5QrCodeScanner = null;
-                }).catch(err => {
-                    console.error("Failed to stop QR Scanner", err);
-                });
+                }).catch(err => console.log(err));
             }
         }
 
         function onQRCodeScanned(decodedText) {
-            // Decoded text expected to be Employee ID (e.g., EMP-1001)
-            const matchedEmp = employees.find(e => e.id === decodedText || e.id === decodedText.trim());
+            const matchedEmp = employees.find(e => e.id.toLowerCase() === decodedText.trim().toLowerCase());
 
             if (matchedEmp) {
                 processAttendance(matchedEmp, 'QR Code');
@@ -942,7 +1189,41 @@
             }
         }
 
-        // Face Scanning Recognition Processing
+        // Scan QR Code from Uploaded File (Fallback)
+        function scanQRFromFile(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const html5QrCode = new Html5Qrcode("qr-reader");
+            html5QrCode.scanFile(file, true)
+                .then(decodedText => {
+                    onQRCodeScanned(decodedText);
+                })
+                .catch(err => {
+                    playErrorSound();
+                    alertModal("ไม่สามารถอ่าน QR Code จากไฟล์ภาพนี้ได้");
+                });
+        }
+
+        // Manual Input Attendance Submit
+        function submitManualAttendance() {
+            const inputVal = document.getElementById('manual-emp-input').value.trim();
+            if (!inputVal) {
+                alertModal("กรุณากรอกรหัสพนักงาน");
+                return;
+            }
+
+            const matchedEmp = employees.find(e => e.id.toLowerCase() === inputVal.toLowerCase());
+            if (matchedEmp) {
+                processAttendance(matchedEmp, 'ป้อนรหัส');
+                document.getElementById('manual-emp-input').value = '';
+            } else {
+                playErrorSound();
+                alertModal(`ไม่พบรหัสพนักงาน: ${inputVal} ในระบบ`);
+            }
+        }
+
+        // Trigger Simulated Face Scan
         function triggerFaceScan() {
             const selectEl = document.getElementById('quick-employee-select');
             const selectedId = selectEl.value;
@@ -955,7 +1236,6 @@
                 }
             }
 
-            // If no testing employee selected, pick a random registered employee to simulate real recognition
             if (employees.length > 0) {
                 const randomEmp = employees[Math.floor(Math.random() * employees.length)];
                 processAttendance(randomEmp, 'ใบหน้า');
@@ -965,22 +1245,28 @@
             }
         }
 
-        // Process Attendance Log Logic
-        function processAttendance(employee, methodStr) {
+        // Core Attendance Processor
+        async function processAttendance(employee, methodStr) {
             const now = new Date();
             const timeStr = now.toLocaleTimeString('th-TH', { hour12: false });
             const dateStr = getFormattedDate(now);
 
-            // Calculate On-Time / Late status (Rule: 08:30 AM threshold)
+            // Shift Logic Assessment
             let status = 'ตรงเวลา';
             if (currentScanMode === 'IN') {
+                const [targetHour, targetMin] = lateThresholdTime.split(':').map(Number);
                 const targetTime = new Date();
-                targetTime.setHours(8, 30, 0, 0);
+                targetTime.setHours(targetHour, targetMin, 0, 0);
+
                 if (now > targetTime) {
                     status = 'สาย';
+                    playLateSound();
+                } else {
+                    playSuccessSound();
                 }
             } else {
                 status = 'ออกงาน';
+                playSuccessSound();
             }
 
             const newLog = {
@@ -994,24 +1280,76 @@
                 type: currentScanMode,
                 method: methodStr,
                 status: status,
-                photo: employee.photo || 'https://placehold.co/150x150/1e293b/94a3b8?text=Photo'
+                photo: employee.photo || 'https://placehold.co/150x150/1e293b/94a3b8?text=Photo',
+                synced: false
             };
 
-            // Save to LocalStorage
+            // Attempt Google Sheets API Sync
+            const isSynced = await sendToGoogleSheet(newLog);
+            newLog.synced = isSynced;
+
             attendanceLogs.unshift(newLog);
             localStorage.setItem(STORAGE_ATTENDANCE_KEY, JSON.stringify(attendanceLogs));
 
-            // Sound feedback & UI popup
-            playSuccessSound();
             showSuccessModal(newLog);
-
-            // Refresh dashboards
             renderRecentFeed();
             renderHistoryTable();
             updateDashboardStats();
         }
 
-        // Show Instant Confirmation Popup Modal
+        // Google Sheets Integration Call (No-CORS / Text-Plain fetch)
+        async function sendToGoogleSheet(logData) {
+            if (!googleSheetsUrl) return false;
+
+            try {
+                const response = await fetch(googleSheetsUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain;charset=utf-8'
+                    },
+                    body: JSON.stringify(logData)
+                });
+                
+                // If response succeeds
+                return true;
+            } catch (err) {
+                console.warn("Google Sheets Sync Failed (Network/Offline):", err);
+                return false;
+            }
+        }
+
+        // Batch Sync Pending Logs to Google Sheets
+        async function syncPendingLogs() {
+            if (!googleSheetsUrl) {
+                alertModal("โปรดตั้งค่า Google Apps Script Web App URL ก่อนกด Sync");
+                openSettingsModal();
+                return;
+            }
+
+            const pendingLogs = attendanceLogs.filter(l => !l.synced);
+            if (pendingLogs.length === 0) {
+                alertModal("ไม่มีข้อมูลลงเวลาที่ค้างบันทึก ข้อมูลทั้งหมดถูก Sync เรียบร้อยแล้ว");
+                return;
+            }
+
+            let syncCount = 0;
+            for (let log of pendingLogs) {
+                const success = await sendToGoogleSheet(log);
+                if (success) {
+                    log.synced = true;
+                    syncCount++;
+                }
+            }
+
+            localStorage.setItem(STORAGE_ATTENDANCE_KEY, JSON.stringify(attendanceLogs));
+            renderHistoryTable();
+            renderRecentFeed();
+            updateDashboardStats();
+            playSuccessSound();
+            alertModal(`ดำเนินการ Sync สำเร็จเรียบร้อยจำนวน ${syncCount} รายการ!`);
+        }
+
+        // Show Instant Confirmation Popup
         function showSuccessModal(log) {
             const modal = document.getElementById('scan-modal');
             const typeBadge = document.getElementById('modal-type-badge');
@@ -1022,6 +1360,7 @@
             const timeEl = document.getElementById('modal-timestamp');
             const statusEl = document.getElementById('modal-status-text');
             const methodEl = document.getElementById('modal-method-text');
+            const syncEl = document.getElementById('modal-sync-text');
 
             nameEl.textContent = log.empName;
             deptEl.textContent = log.department;
@@ -1046,12 +1385,19 @@
                 statusEl.className = 'font-bold text-amber-400';
             } else {
                 statusEl.textContent = 'ออกงานสำเร็จ';
-                statusEl.className = 'font-bold text-cyan-400';
+                statusEl.className = 'font-bold text-purple-400';
+            }
+
+            if (log.synced) {
+                syncEl.textContent = 'Sync เรียบร้อย';
+                syncEl.className = 'font-bold text-emerald-400';
+            } else {
+                syncEl.textContent = 'ค้าง Sync (บันทึกในเครื่องแล้ว)';
+                syncEl.className = 'font-bold text-amber-400';
             }
 
             modal.classList.remove('hidden');
 
-            // Auto close modal after 3 seconds
             setTimeout(() => {
                 closeScanModal();
             }, 3500);
@@ -1061,7 +1407,7 @@
             document.getElementById('scan-modal').classList.add('hidden');
         }
 
-        // Render Recent Activity Feed Sidebar
+        // Render Recent Activity Sidebar
         function renderRecentFeed() {
             const container = document.getElementById('recent-feed-list');
             const countBadge = document.getElementById('today-count-badge');
@@ -1099,13 +1445,15 @@
                     </div>
                     <div class="text-right">
                         <span class="text-xs font-mono font-bold text-white block">${log.timeStr}</span>
-                        <span class="text-[10px] ${log.status === 'สาย' ? 'text-amber-400 font-semibold' : 'text-slate-400'}">${log.status}</span>
+                        <span class="text-[10px] ${log.synced ? 'text-emerald-400' : 'text-amber-400'}">
+                            ${log.synced ? '<i class="fa-solid fa-cloud-check"></i> Synced' : '<i class="fa-solid fa-clock-rotate-left"></i> Pending'}
+                        </span>
                     </div>
                 </div>
             `).join('');
         }
 
-        // Registration Handler
+        // Registration Form Submit Handler
         function handleRegister(e) {
             e.preventDefault();
 
@@ -1119,7 +1467,6 @@
                 return;
             }
 
-            // Check duplicate ID
             if (employees.some(emp => emp.id.toLowerCase() === empId.toLowerCase())) {
                 alertModal(`รหัสพนักงาน ${empId} มีอยู่ในระบบแล้ว`);
                 return;
@@ -1136,12 +1483,10 @@
             employees.push(newEmployee);
             localStorage.setItem(STORAGE_EMPLOYEES_KEY, JSON.stringify(employees));
 
-            // Render Badge Preview Card
             document.getElementById('badge-name').textContent = name;
             document.getElementById('badge-dept').textContent = department;
             document.getElementById('badge-id-text').textContent = `ID: ${empId}`;
             
-            // Generate QR Code in canvas
             const qrContainer = document.getElementById('badge-qrcode');
             qrContainer.innerHTML = '';
             new QRCode(qrContainer, {
@@ -1156,18 +1501,15 @@
             playSuccessSound();
             alertModal(`ลงทะเบียนพนักงาน ${name} (${empId}) เรียบร้อยแล้ว!`);
 
-            // Reset Form
             document.getElementById('register-form').reset();
             populateEmployeeSelect();
             renderDirectory();
         }
 
-        // Print Badge Card Function
         function printBadgeCard() {
             window.print();
         }
 
-        // Populate testing selector dropdown
         function populateEmployeeSelect() {
             const select = document.getElementById('quick-employee-select');
             if (!select) return;
@@ -1194,7 +1536,7 @@
             if (filtered.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="px-4 py-8 text-center text-slate-500 text-xs">
+                        <td colspan="8" class="px-4 py-8 text-center text-slate-500 text-xs">
                             ไม่พบข้อมูลประวัติการลงเวลาตามเงื่อนไขที่เลือก
                         </td>
                     </tr>
@@ -1228,21 +1570,22 @@
                             ${log.status}
                         </span>
                     </td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${log.synced ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800'}">
+                            ${log.synced ? 'Synced' : 'Pending'}
+                        </span>
+                    </td>
                 </tr>
             `).join('');
         }
 
-        // Render Employee Directory
+        // Render Employee Directory Cards
         function renderDirectory() {
             const grid = document.getElementById('employee-grid');
             if (!grid) return;
 
             if (employees.length === 0) {
-                grid.innerHTML = `
-                    <div class="col-span-full text-center py-12 text-slate-500">
-                        ยังไม่มีข้อมูลพนักงานในระบบ
-                    </div>
-                `;
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-slate-500">ยังไม่มีข้อมูลพนักงานในระบบ</div>`;
                 return;
             }
 
@@ -1266,7 +1609,6 @@
                 </div>
             `).join('');
 
-            // Generate QR Codes for each directory card
             setTimeout(() => {
                 employees.forEach(emp => {
                     const el = document.getElementById(`dir-qr-${emp.id}`);
@@ -1295,7 +1637,7 @@
             populateEmployeeSelect();
         }
 
-        // Update Dashboard Top Statistics
+        // Update Dashboard Top Counters
         function updateDashboardStats() {
             const todayStr = getFormattedDate();
             const todayLogs = attendanceLogs.filter(l => l.dateStr === todayStr);
@@ -1304,19 +1646,102 @@
             const onTimeToday = todayLogs.filter(l => l.type === 'IN' && l.status === 'ตรงเวลา').length;
             const lateToday = todayLogs.filter(l => l.type === 'IN' && l.status === 'สาย').length;
             const checkoutsToday = todayLogs.filter(l => l.type === 'OUT').length;
+            const pendingSyncCount = attendanceLogs.filter(l => !l.synced).length;
 
-            const elTotal = document.getElementById('stat-total-today');
-            const elOnTime = document.getElementById('stat-ontime-today');
-            const elLate = document.getElementById('stat-late-today');
-            const elCheckout = document.getElementById('stat-checkout-today');
-
-            if (elTotal) elTotal.textContent = totalToday;
-            if (elOnTime) elOnTime.textContent = onTimeToday;
-            if (elLate) elLate.textContent = lateToday;
-            if (elCheckout) elCheckout.textContent = checkoutsToday;
+            document.getElementById('stat-total-today').textContent = totalToday;
+            document.getElementById('stat-ontime-today').textContent = onTimeToday;
+            document.getElementById('stat-late-today').textContent = lateToday;
+            document.getElementById('stat-checkout-today').textContent = checkoutsToday;
+            document.getElementById('stat-pending-sync').textContent = pendingSyncCount;
         }
 
-        // Export Attendance Records to CSV file (UTF-8 with BOM for Excel compatibility)
+        // Update Google Sheets Status Indicator Badge in Navbar
+        function updateSheetsStatusBadge() {
+            const dot = document.getElementById('sync-status-dot');
+            const text = document.getElementById('sync-status-text');
+
+            if (!googleSheetsUrl) {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+                text.textContent = "ยังไม่ได้ตั้งค่า Google Sheets";
+            } else {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+                text.textContent = "Google Sheets: พร้อมใช้งาน";
+            }
+        }
+
+        // Settings Modal Handlers
+        function openSettingsModal() {
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function saveSettings() {
+            const urlInput = document.getElementById('setting-sheets-url').value.trim();
+            const lateTimeInput = document.getElementById('setting-late-time').value;
+
+            googleSheetsUrl = urlInput;
+            lateThresholdTime = lateTimeInput || '08:30';
+
+            localStorage.setItem(STORAGE_SHEETS_URL_KEY, googleSheetsUrl);
+            localStorage.setItem(STORAGE_LATE_TIME_KEY, lateThresholdTime);
+
+            document.getElementById('display-late-threshold').textContent = `${lateThresholdTime} น.`;
+            updateSheetsStatusBadge();
+            closeSettingsModal();
+            playSuccessSound();
+            alertModal("บันทึกการตั้งค่าระบบเรียบร้อยแล้ว");
+        }
+
+        // Test Google Sheets Apps Script Connection
+        async function testSheetsConnection() {
+            const urlInput = document.getElementById('setting-sheets-url').value.trim();
+            if (!urlInput) {
+                alertModal("โปรดใส่ Google Apps Script Web App URL ก่อนกดทดสอบ");
+                return;
+            }
+
+            try {
+                const testData = {
+                    id: 'TEST-LOG',
+                    dateStr: getFormattedDate(),
+                    timeStr: new Date().toLocaleTimeString('th-TH'),
+                    empId: 'TEST-000',
+                    empName: 'ทดสอบระบบ',
+                    department: 'ระบบ',
+                    type: 'TEST',
+                    status: 'ปกติ',
+                    method: 'ทดสอบการเชื่อมต่อ'
+                };
+
+                await fetch(urlInput, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(testData)
+                });
+
+                playSuccessSound();
+                alertModal("ทดสอบการเชื่อมต่อสำเร็จ! คำขอส่งไปยัง Google Apps Script เรียบร้อยแล้ว");
+            } catch (err) {
+                playErrorSound();
+                alertModal("ไม่สามารถเชื่อมต่อได้: " + err.message);
+            }
+        }
+
+        function copyAppsScriptCode() {
+            const code = document.getElementById('apps-script-code-text').textContent;
+            const textarea = document.createElement('textarea');
+            textarea.value = code;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            alertModal("คัดลอกโค้ด Google Apps Script เรียบร้อยแล้ว!");
+        }
+
+        // Export to UTF-8 BOM CSV File
         function exportToCSV() {
             if (attendanceLogs.length === 0) {
                 alertModal("ไม่มีข้อมูลลงเวลาสำหรับส่งออก");
@@ -1324,10 +1749,11 @@
             }
 
             let csvContent = "\uFEFF"; // UTF-8 BOM
-            csvContent += "รหัสพนักงาน,ชื่อ-นามสกุล,แผนก,วันที่,เวลา,ประเภท,วิธีสแกน,สถานะ\n";
+            csvContent += "ลำดับ,รหัสพนักงาน,ชื่อ-นามสกุล,แผนก,วันที่,เวลา,ประเภท,วิธีสแกน,สถานะ,Google Sheets Sync\n";
 
-            attendanceLogs.forEach(log => {
+            attendanceLogs.forEach((log, index) => {
                 const row = [
+                    index + 1,
                     `"${log.empId}"`,
                     `"${log.empName}"`,
                     `"${log.department}"`,
@@ -1335,7 +1761,8 @@
                     `"${log.timeStr}"`,
                     `"${log.type === 'IN' ? 'เข้างาน' : 'ออกงาน'}"`,
                     `"${log.method}"`,
-                    `"${log.status}"`
+                    `"${log.status}"`,
+                    `"${log.synced ? 'Synced' : 'Pending'}"`
                 ];
                 csvContent += row.join(",") + "\n";
             });
@@ -1350,7 +1777,7 @@
             document.body.removeChild(link);
         }
 
-        // Modal Alert Replacement (Avoiding native alert UI)
+        // Alert Modal Replacement
         function alertModal(msg) {
             const modal = document.getElementById('scan-modal');
             const typeBadge = document.getElementById('modal-type-badge');
@@ -1358,44 +1785,19 @@
             const deptEl = document.getElementById('modal-emp-dept');
             const idEl = document.getElementById('modal-emp-id');
             const statusEl = document.getElementById('modal-status-text');
+            const syncEl = document.getElementById('modal-sync-text');
 
             typeBadge.textContent = 'แจ้งเตือนระบบ';
             typeBadge.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase bg-amber-950 text-amber-400 border border-amber-800';
             nameEl.textContent = msg;
             deptEl.textContent = '';
             idEl.textContent = '';
-            statusEl.textContent = 'การแจ้งเตือน';
+            statusEl.textContent = 'แจ้งเตือน';
             statusEl.className = 'text-amber-400';
+            syncEl.textContent = '-';
 
             modal.classList.remove('hidden');
         }
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxXEeNAYDRfESEgopllhhZBwrTxOXLLaMKwkNyqToL-2cj8qFI8I36gmPXIFGkmTKiA/exec';
-
-async function sendAttendanceToGoogleSheet(recordData) {
-  try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8', // ใช้ text/plain เพื่อเลี่ยงปัญหากับ CORS บน Apps Script
-      },
-      body: JSON.stringify({
-        date: new Date().toLocaleDateString('th-TH'),
-        time: new Date().toLocaleTimeString('th-TH'),
-        empId: recordData.empId,
-        name: recordData.name,
-        department: recordData.department,
-        type: recordData.type,         // 'เข้างาน' หรือ 'ออกงาน'
-        status: recordData.status,     // 'ตรงเวลา' หรือ 'สาย'
-        scanMethod: recordData.method  // 'QR Code' หรือ 'Face Scan'
-      })
-    });
-    
-    const result = await response.json();
-    console.log("บันทึกข้อมูลลง Google Sheet เรียบร้อย:", result);
-  } catch (error) {
-    console.error("เกิดข้อผิดพลาดในการบันทึกข้อมูลลง Google Sheet:", error);
-  }
-}
     </script>
 </body>
 </html>
